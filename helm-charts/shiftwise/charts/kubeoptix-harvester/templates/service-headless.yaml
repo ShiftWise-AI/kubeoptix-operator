@@ -1,0 +1,18 @@
+{{- if and .Values.deploy.enabled .Values.service.headless.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.headless.name }}
+  namespace: {{ include "kubeoptix-harvester.namespace" . }}
+  labels:
+    {{- include "kubeoptix-harvester.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "kubeoptix-harvester.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.service.headless.port }}
+      targetPort: {{ .Values.service.headless.port }}
+      protocol: TCP
+{{- end }}

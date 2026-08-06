@@ -1,0 +1,20 @@
+schema: olm.package
+name: shiftwise-operator
+defaultChannel: stable
+---
+schema: olm.channel
+package: shiftwise-operator
+name: stable
+entries:
+  - name: shiftwise-operator.v0.1.0
+---
+schema: olm.bundle
+package: shiftwise-operator
+name: shiftwise-operator.v0.1.0
+image: quay.io/parraes/shiftwise-operator-bundle:v0.1.0
+properties:
+  - type: olm.gvk
+    value:
+      group: shiftwise.ai
+      kind: ShiftWise
+      version: v1alpha1

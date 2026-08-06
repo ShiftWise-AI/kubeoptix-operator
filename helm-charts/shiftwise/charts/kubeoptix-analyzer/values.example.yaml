@@ -1,0 +1,80 @@
+deploy:
+  enabled: true
+
+namespace:
+  create: false
+  name: shiftwise-ai
+
+image:
+  useBuildOutput: true
+  repository: default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/kubeoptix-analyzer
+  tag: latest
+  pullPolicy: Always
+
+build:
+  enabled: true
+  registryHost: image-registry.openshift-image-registry.svc:5000
+  imageStreamName: kubeoptix-analyzer
+  outputTag: latest
+  containerfilePath: Containerfile
+  source:
+    gitUri: https://github.com/ShiftWise-AI/kubeoptix-analyzer.git
+    gitRef: feature/ocp
+    contextDir: ""
+  sourceSecret:
+    create: false
+    name: "github-auth"
+    username: ""
+    token: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+startup:
+  loginWithServiceAccount: false
+  script: ""
+
+podEnv:
+  HOME: /tmp
+  KUBECONFIG: /tmp/kubeconfig
+
+rbac:
+  createClusterRoleBinding: true
+  clusterRoleName: cluster-reader
+
+service:
+  headless:
+    enabled: true
+    name: analyzer
+    port: 8080
+  api:
+    enabled: true
+    name: analyzer-api
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+
+route:
+  enabled: true
+  name: analyzer
+  host: ""
+  termination: edge
+  insecureEdgeTerminationPolicy: Redirect
+
+scalePolicy:
+  enabled: true
+  maxReplicas: 1
+
+persistence:
+  enabled: true
+  existingClaim: harvester-app-data
+  mountPath: /app/data
+
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 2Gi

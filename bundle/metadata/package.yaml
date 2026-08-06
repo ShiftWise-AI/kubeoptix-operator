@@ -1,0 +1,5 @@
+packageName: shiftwise-operator
+channels:
+  - name: stable
+    currentCSV: shiftwise-operator.v0.1.0
+defaultChannel: stable

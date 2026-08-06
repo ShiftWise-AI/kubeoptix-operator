@@ -1,0 +1,16 @@
+apiVersion: v2
+name: shiftwise
+description: ShiftWise umbrella chart for OpenShift workloads (harvester + analyzer)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+  - name: kubeoptix-harvester
+    version: 0.1.0
+    repository: file://charts/kubeoptix-harvester
+    condition: kubeoptix-harvester.deploy.enabled
+  - name: kubeoptix-analyzer
+    version: 0.1.0
+    repository: file://charts/kubeoptix-analyzer
+    condition: kubeoptix-analyzer.deploy.enabled

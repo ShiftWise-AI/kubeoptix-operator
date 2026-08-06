@@ -1,0 +1,32 @@
+apiVersion: shiftwise.ai/v1alpha1
+kind: ShiftWise
+metadata:
+  name: shiftwise
+  namespace: shiftwise-ai
+spec:
+  kubeoptix-harvester:
+    namespace:
+      create: true
+      name: shiftwise-ai
+    build:
+      enabled: true
+      source:
+        gitUri: https://github.com/ShiftWise-AI/kubeoptix-harvester.git
+        gitRef: feature/ocp
+      sourceSecret:
+        create: false
+        name: github-auth
+        username: x-access-token
+        token: ""
+  kubeoptix-analyzer:
+    namespace:
+      create: false
+      name: shiftwise-ai
+    build:
+      enabled: true
+      source:
+        gitUri: https://github.com/ShiftWise-AI/kubeoptix-analyzer.git
+        gitRef: feature/ocp
+      sourceSecret:
+        create: false
+        name: github-auth

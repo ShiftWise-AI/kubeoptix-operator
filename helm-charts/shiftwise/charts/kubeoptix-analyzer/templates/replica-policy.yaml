@@ -1,0 +1,32 @@
+{{- if and .Values.deploy.enabled .Values.scalePolicy.enabled (.Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy") }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ include "kubeoptix-analyzer.fullname" . }}-max-replicas
+  labels:
+    {{- include "kubeoptix-analyzer.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["statefulsets", "statefulsets/scale"]
+  matchConditions:
+    - name: target-workload
+      expression: request.namespace == '{{ include "kubeoptix-analyzer.namespace" . }}' && request.name == '{{ include "kubeoptix-analyzer.fullname" . }}'
+  validations:
+    - expression: '!has(object.spec.replicas) || object.spec.replicas <= {{ .Values.scalePolicy.maxReplicas }}'
+      message: 'Scaling is restricted. Maximum replicas allowed for this workload is {{ .Values.scalePolicy.maxReplicas }}.'
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ include "kubeoptix-analyzer.fullname" . }}-max-replicas-binding
+  labels:
+    {{- include "kubeoptix-analyzer.labels" . | nindent 4 }}
+spec:
+  policyName: {{ include "kubeoptix-analyzer.fullname" . }}-max-replicas
+  validationActions: [Deny]
+{{- end }}

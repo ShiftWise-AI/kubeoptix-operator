@@ -1,0 +1,21 @@
+apiVersion: shiftwise.ai/v1alpha1
+kind: ShiftWiseApp
+metadata:
+  labels:
+    app.kubernetes.io/name: shiftwiseapp
+    app.kubernetes.io/instance: sample
+    app.kubernetes.io/managed-by: kubeoptix-operator
+  name: sample
+  namespace: default
+spec:
+  image: nginx:1.25
+  replicas: 2
+  port: 8080
+  serviceType: ClusterIP
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"

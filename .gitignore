@@ -1,0 +1,12 @@
+# Binaries and build output
+bin/
+
+# Go test cache
+vendor/
+
+# IDE
+.idea/
+.vscode/
+
+# OS artifacts
+.DS_Store

@@ -1,0 +1,56 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeoptix-operator-manager-role
+rules:
+- apiGroups:
+  - shiftwise.ai
+  resources:
+  - shiftwiseapps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - shiftwise.ai
+  resources:
+  - shiftwiseapps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - shiftwise.ai
+  resources:
+  - shiftwiseapps/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

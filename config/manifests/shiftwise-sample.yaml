@@ -6,12 +6,12 @@ metadata:
 spec:
   targetNamespace: shiftwise-ai
   images:
-    harvester: quay.io/shiftwise-ai/kubeoptix-harvester:latest
-    analyzer: quay.io/shiftwise-ai/kubeoptix-analyzer:latest
-    coreAi: quay.io/shiftwise-ai/kubeoptix-core-ai:latest
-    configurations: quay.io/shiftwise-ai/kubeoptix-configurations:latest
-    reporter: quay.io/shiftwise-ai/kubeoptix-reporter:latest
-    dashboard: quay.io/shiftwise-ai/kubeoptix-dashboard:latest
+    harvester: quay.io/parraes/kubeoptix-harvester:v0.1.0
+    analyzer: quay.io/parraes/kubeoptix-analyzer:v0.1.0
+    coreAi: quay.io/parraes/kubeoptix-core-ai:v0.1.0
+    configurations: quay.io/parraes/kubeoptix-configurations:v0.1.0
+    reporter: quay.io/parraes/kubeoptix-reporter:v0.1.0
+    dashboard: quay.io/parraes/kubeoptix-dashboard:v0.1.0
     postgres: registry.redhat.io/rhel9/postgresql-16:latest
   storage:
     size: 10Gi

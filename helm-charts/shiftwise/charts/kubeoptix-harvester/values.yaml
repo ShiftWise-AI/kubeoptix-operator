@@ -19,7 +19,7 @@ build:
   containerfilePath: Containerfile
   source:
     gitUri: https://github.com/ShiftWise-AI/kubeoptix-harvester.git
-    gitRef: feature/ocp
+    gitRef: main
     contextDir: ""
   sourceSecret:
     create: true
@@ -32,7 +32,7 @@ fullnameOverride: ""
 
 serviceAccount:
   create: true
-  name: shiftwisea-ai-user
+  name: kubeoptix-harvester
   automountServiceAccountToken: true
 
 rbac:

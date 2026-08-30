@@ -28,7 +28,7 @@ metadata:
                 "enabled": true,
                 "source": {
                   "gitUri": "https://github.com/ShiftWise-AI/kubeoptix-harvester.git",
-                  "gitRef": "feature/ocp"
+                  "gitRef": "main"
                 },
                 "sourceSecret": {
                   "create": false,
@@ -45,7 +45,7 @@ metadata:
                 "enabled": true,
                 "source": {
                   "gitUri": "https://github.com/ShiftWise-AI/kubeoptix-analyzer.git",
-                  "gitRef": "feature/ocp"
+                  "gitRef": "main"
                 },
                 "sourceSecret": {
                   "create": false,

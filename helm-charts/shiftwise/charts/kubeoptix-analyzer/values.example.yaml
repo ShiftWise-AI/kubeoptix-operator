@@ -19,7 +19,7 @@ build:
   containerfilePath: Containerfile
   source:
     gitUri: https://github.com/ShiftWise-AI/kubeoptix-analyzer.git
-    gitRef: feature/ocp
+    gitRef: main
     contextDir: ""
   sourceSecret:
     create: false

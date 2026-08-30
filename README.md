@@ -16,11 +16,11 @@ Exemplo com Podman:
 
 ```bash
 cd /home/parraes/redhat/shiftwise-ai/kubeoptix-operator
-podman build -t quay.io/parraes/shiftwise-operator-system:0.1.0 .
-podman push quay.io/parraes/shiftwise-operator-system:0.1.0
+podman build -t quay.io/parraes/shiftwise-operator-system:0.1.2 .
+podman push quay.io/parraes/shiftwise-operator-system:0.1.2
 ```
 
-O manifest já está configurado para `quay.io/parraes/shiftwise-operator-system:0.1.0`.
+O manifest já está configurado para `quay.io/parraes/shiftwise-operator-system:0.1.2`.
 
 ## Instalação no OpenShift
 
@@ -29,10 +29,11 @@ oc apply -f config/manifests/install-crd.yaml
 oc apply -f config/manifests/shiftwise-operator.yaml
 ```
 
+O operador roda no mesmo namespace da instância, `shiftwise-ai`, criado pelo próprio manifest.
+
 ## Criando instância ShiftWise
 
 ```bash
-oc create namespace shiftwise-ai
 oc apply -f config/manifests/kubeoptix-credentials-example.yaml
 oc apply -f config/manifests/shiftwise-sample.yaml
 ```
@@ -48,7 +49,7 @@ O Secret referenciado precisa conter `POSTGRESQL_USER`, `POSTGRESQL_PASSWORD`, `
 ## Observações
 
 - O controlador registra eventos de reconciliação em JSON no stdout e atualiza `.status.phase` e `.status.readyComponents` em cada ciclo de 30 segundos.
-- A prontidão dos seis serviços é obtida a partir de `Deployment.status.readyReplicas`; isso oferece um sinal operacional sem depender de CRDs opcionais de monitoramento.
+- A prontidão dos seis serviços é obtida a partir de `StatefulSet.status.readyReplicas`; isso oferece um sinal operacional sem depender de CRDs opcionais de monitoramento.
 - O Harvester recebe RBAC de leitura para os recursos que coleta, inclusive nós, workloads, rotas e recursos de monitoramento.
 - O operador usa imagens configuráveis. As referências `quay.io/shiftwise-ai/...` no exemplo devem existir e ser acessíveis ao cluster antes da instalação.
 
@@ -77,10 +78,7 @@ Se alterar o nome/tag da imagem do bundle, atualize `catalog/shiftwise-operator/
 
 ```bash
 cd /home/parraes/redhat/shiftwise-ai/kubeoptix-operator
-podman build -t quay.io/parraes/shiftwise-operator-catalog:v0.1.0 -f - . <<'EOF'
-FROM scratch
-COPY catalog/shiftwise-operator/catalog.yaml /configs/
-EOF
+podman build -t quay.io/parraes/shiftwise-operator-catalog:v0.1.0 -f catalog.Dockerfile .
 podman push quay.io/parraes/shiftwise-operator-catalog:v0.1.0
 ```
 

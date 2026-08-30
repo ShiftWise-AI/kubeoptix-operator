@@ -6,7 +6,7 @@ kubeoptix-harvester:
     name: shiftwise-ai
   serviceAccount:
     create: true
-    name: shiftwisea-ai-user
+    name: kubeoptix-harvester
   rbac:
     createClusterRoleBinding: true
   build:

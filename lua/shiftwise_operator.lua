@@ -16,12 +16,12 @@ local poll_seconds = tonumber(os.getenv("RECONCILE_INTERVAL_SECONDS")) or 30
 local kubectl = os.getenv("KUBECTL_BIN") or "kubectl"
 
 local default_images = {
-  harvester = os.getenv("KUBEOPTIX_HARVESTER_IMAGE") or "quay.io/shiftwise-ai/kubeoptix-harvester:latest",
-  analyzer = os.getenv("KUBEOPTIX_ANALYZER_IMAGE") or "quay.io/shiftwise-ai/kubeoptix-analyzer:latest",
-  coreAi = os.getenv("KUBEOPTIX_CORE_AI_IMAGE") or "quay.io/shiftwise-ai/kubeoptix-core-ai:latest",
-  configurations = os.getenv("KUBEOPTIX_CONFIGURATIONS_IMAGE") or "quay.io/shiftwise-ai/kubeoptix-configurations:latest",
-  reporter = os.getenv("KUBEOPTIX_REPORTER_IMAGE") or "quay.io/shiftwise-ai/kubeoptix-reporter:latest",
-  dashboard = os.getenv("KUBEOPTIX_DASHBOARD_IMAGE") or "quay.io/shiftwise-ai/kubeoptix-dashboard:latest",
+  harvester = os.getenv("KUBEOPTIX_HARVESTER_IMAGE") or "quay.io/parraes/kubeoptix-harvester:v0.1.0",
+  analyzer = os.getenv("KUBEOPTIX_ANALYZER_IMAGE") or "quay.io/parraes/kubeoptix-analyzer:v0.1.0",
+  coreAi = os.getenv("KUBEOPTIX_CORE_AI_IMAGE") or "quay.io/parraes/kubeoptix-core-ai:v0.1.0",
+  configurations = os.getenv("KUBEOPTIX_CONFIGURATIONS_IMAGE") or "quay.io/parraes/kubeoptix-configurations:v0.1.0",
+  reporter = os.getenv("KUBEOPTIX_REPORTER_IMAGE") or "quay.io/parraes/kubeoptix-reporter:v0.1.0",
+  dashboard = os.getenv("KUBEOPTIX_DASHBOARD_IMAGE") or "quay.io/parraes/kubeoptix-dashboard:v0.1.0",
   postgres = os.getenv("POSTGRES_IMAGE") or "registry.redhat.io/rhel9/postgresql-16:latest",
 }
 
@@ -67,6 +67,14 @@ local function object(api_version, kind, metadata, spec)
   return value
 end
 
+-- Some kinds (Secret, ConfigMap, ClusterRole, ClusterRoleBinding, ...) place their
+-- fields at the top level instead of under "spec"; merge them in directly.
+local function flat_object(api_version, kind, metadata, fields)
+  local value = { apiVersion = api_version, kind = kind, metadata = metadata }
+  for key, field_value in pairs(fields or {}) do value[key] = field_value end
+  return value
+end
+
 local function labels(name, instance)
   return {
     ["app.kubernetes.io/managed-by"] = "shiftwise-lua-operator",
@@ -84,18 +92,20 @@ local function env_secret(name, secret_name, key)
   return { name = name, valueFrom = { secretKeyRef = { name = secret_name, key = key } } }
 end
 
-local function deployment(component, namespace, instance, image, env, mounts, claim_name)
+local function statefulset(component, namespace, instance, image, env, mounts, claim_name)
   local component_labels = labels(component, instance)
   local health_path = "/health"
+  local http_port = 8000
   if component == "kubeoptix-configurations" then health_path = "/q/health/ready" end
-  if component == "kubeoptix-dashboard" then health_path = "/" end
-  return object("apps/v1", "Deployment", { name = component, namespace = namespace, labels = component_labels }, {
+  if component == "kubeoptix-dashboard" then health_path, http_port = "/", 8080 end
+  return object("apps/v1", "StatefulSet", { name = component, namespace = namespace, labels = component_labels }, {
+    serviceName = component,
     replicas = 1,
     selector = { matchLabels = component_labels },
     template = { metadata = { labels = component_labels }, spec = {
       serviceAccountName = component == "kubeoptix-harvester" and "kubeoptix-harvester" or nil,
       containers = {{ name = component, image = image, imagePullPolicy = "IfNotPresent", env = env,
-        ports = {{ name = "http", containerPort = 8000 }},
+        ports = {{ name = "http", containerPort = http_port }},
         volumeMounts = mounts,
         readinessProbe = { httpGet = { path = health_path, port = "http" }, initialDelaySeconds = 10, periodSeconds = 10 },
         livenessProbe = { httpGet = { path = health_path, port = "http" }, initialDelaySeconds = 20, periodSeconds = 20 },
@@ -107,8 +117,17 @@ local function deployment(component, namespace, instance, image, env, mounts, cl
 end
 
 local function service(component, namespace, instance)
+  local http_port = component == "kubeoptix-dashboard" and 8080 or 8000
   return object("v1", "Service", { name = component, namespace = namespace, labels = labels(component, instance) }, {
-    selector = labels(component, instance), ports = {{ name = "http", port = 8000, targetPort = "http" }},
+    selector = labels(component, instance), ports = {{ name = "http", port = http_port, targetPort = "http" }},
+  })
+end
+
+local function route(component, namespace, instance)
+  return object("route.openshift.io/v1", "Route", { name = component, namespace = namespace, labels = labels(component, instance) }, {
+    to = { kind = "Service", name = component },
+    port = { targetPort = "http" },
+    tls = { termination = "edge", insecureEdgeTerminationPolicy = "Redirect" },
   })
 end
 
@@ -126,7 +145,7 @@ local function build_resources(resource)
 
   table.insert(resources, object("v1", "Namespace", { name = namespace, labels = labels("kubeoptix", instance) }))
   if not credentials.existingSecret then
-    table.insert(resources, object("v1", "Secret", { name = secret_name, namespace = namespace, labels = labels("credentials", instance) },
+    table.insert(resources, flat_object("v1", "Secret", { name = secret_name, namespace = namespace, labels = labels("credentials", instance) },
       { type = "Opaque", stringData = {
         POSTGRESQL_USER = credentials.postgresUser or "kubeoptix",
         POSTGRESQL_PASSWORD = credentials.postgresPassword or "change-me-before-production",
@@ -134,7 +153,7 @@ local function build_resources(resource)
         LLM_API_KEY = credentials.llmApiKey or "",
       }}))
   end
-  table.insert(resources, object("v1", "ConfigMap", { name = "kubeoptix-endpoints", namespace = namespace, labels = labels("endpoints", instance) }, { data = {
+  table.insert(resources, flat_object("v1", "ConfigMap", { name = "kubeoptix-endpoints", namespace = namespace, labels = labels("endpoints", instance) }, { data = {
     HARVESTER_API_URL = "http://kubeoptix-harvester:8000", ANALYZER_API_URL = "http://kubeoptix-analyzer:8000",
     CORE_AI_API_URL = "http://kubeoptix-core-ai:8000", CONFIGURATIONS_API_URL = "http://kubeoptix-configurations:8000",
     REPORTER_API_URL = "http://kubeoptix-reporter:8000",
@@ -146,25 +165,25 @@ local function build_resources(resource)
   end
 
   table.insert(resources, object("v1", "ServiceAccount", { name = "kubeoptix-harvester", namespace = namespace, labels = labels("harvester", instance) }))
-  table.insert(resources, object("rbac.authorization.k8s.io/v1", "ClusterRole", { name = "kubeoptix-harvester-" .. namespace }, { rules = {
+  table.insert(resources, flat_object("rbac.authorization.k8s.io/v1", "ClusterRole", { name = "kubeoptix-harvester-" .. namespace }, { rules = {
     { apiGroups = { "" }, resources = { "nodes", "pods", "services", "configmaps", "events", "persistentvolumeclaims", "serviceaccounts" }, verbs = { "get", "list" } },
     { apiGroups = { "apps", "autoscaling", "batch" }, resources = { "deployments", "statefulsets", "daemonsets", "replicasets", "horizontalpodautoscalers", "jobs", "cronjobs" }, verbs = { "get", "list" } },
     { apiGroups = { "route.openshift.io", "monitoring.coreos.com" }, resources = { "routes", "servicemonitors", "podmonitors", "prometheusrules" }, verbs = { "get", "list" } },
   }}))
-  table.insert(resources, object("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", { name = "kubeoptix-harvester-" .. namespace }, { roleRef = { apiGroup = "rbac.authorization.k8s.io", kind = "ClusterRole", name = "kubeoptix-harvester-" .. namespace }, subjects = {{ kind = "ServiceAccount", name = "kubeoptix-harvester", namespace = namespace }} }))
+  table.insert(resources, flat_object("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", { name = "kubeoptix-harvester-" .. namespace }, { roleRef = { apiGroup = "rbac.authorization.k8s.io", kind = "ClusterRole", name = "kubeoptix-harvester-" .. namespace }, subjects = {{ kind = "ServiceAccount", name = "kubeoptix-harvester", namespace = namespace }} }))
 
   if enabled(spec, "configurations") then
     table.insert(resources, object("apps/v1", "StatefulSet", { name = "kubeoptix-postgresql", namespace = namespace, labels = labels("postgresql", instance) }, { serviceName = "kubeoptix-postgresql", replicas = 1, selector = { matchLabels = labels("postgresql", instance) }, template = { metadata = { labels = labels("postgresql", instance) }, spec = { containers = {{ name = "postgresql", image = images.postgres, env = { env_secret("POSTGRESQL_USER", secret_name, "POSTGRESQL_USER"), env_secret("POSTGRESQL_PASSWORD", secret_name, "POSTGRESQL_PASSWORD"), env_secret("POSTGRESQL_DATABASE", secret_name, "POSTGRESQL_DATABASE") }, ports = {{ name = "postgresql", containerPort = 5432 }}, volumeMounts = {{ name = "postgres-data", mountPath = "/var/lib/pgsql/data" }} }}, volumes = {{ name = "postgres-data", persistentVolumeClaim = { claimName = "kubeoptix-data" }}} }}}))
     table.insert(resources, object("v1", "Service", { name = "kubeoptix-postgresql", namespace = namespace, labels = labels("postgresql", instance) }, { selector = labels("postgresql", instance), ports = {{ name = "postgresql", port = 5432, targetPort = "postgresql" }} }))
-    table.insert(resources, deployment("kubeoptix-configurations", namespace, instance, images.configurations, { env_secret("POSTGRESQL_USER", secret_name, "POSTGRESQL_USER"), env_secret("POSTGRESQL_PASSWORD", secret_name, "POSTGRESQL_PASSWORD"), env_secret("POSTGRESQL_DATABASE", secret_name, "POSTGRESQL_DATABASE"), { name = "POSTGRESQL_HOST", value = "kubeoptix-postgresql" }, { name = "QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION", value = "update" } }))
+    table.insert(resources, statefulset("kubeoptix-configurations", namespace, instance, images.configurations, { env_secret("POSTGRESQL_USER", secret_name, "POSTGRESQL_USER"), env_secret("POSTGRESQL_PASSWORD", secret_name, "POSTGRESQL_PASSWORD"), env_secret("POSTGRESQL_DATABASE", secret_name, "POSTGRESQL_DATABASE"), { name = "POSTGRESQL_HOST", value = "kubeoptix-postgresql" }, { name = "QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION", value = "update" } }))
     table.insert(resources, service("kubeoptix-configurations", namespace, instance))
   end
   local shared_mount = {{ name = "kubeoptix-data", mountPath = "/app/data" }}
-  if enabled(spec, "harvester") then table.insert(resources, deployment("kubeoptix-harvester", namespace, instance, images.harvester, nil, shared_mount, data_claim)); table.insert(resources, service("kubeoptix-harvester", namespace, instance)) end
-  if enabled(spec, "analyzer") then table.insert(resources, deployment("kubeoptix-analyzer", namespace, instance, images.analyzer, nil, shared_mount, data_claim)); table.insert(resources, service("kubeoptix-analyzer", namespace, instance)) end
-  if enabled(spec, "coreAi") then table.insert(resources, deployment("kubeoptix-core-ai", namespace, instance, images.coreAi, nil, shared_mount, data_claim)); table.insert(resources, service("kubeoptix-core-ai", namespace, instance)) end
-  if enabled(spec, "reporter") then table.insert(resources, deployment("kubeoptix-reporter", namespace, instance, images.reporter, {{ name = "CONFIGURATIONS_API_URL", value = "http://kubeoptix-configurations:8000" }}, shared_mount, data_claim)); table.insert(resources, service("kubeoptix-reporter", namespace, instance)) end
-  if enabled(spec, "dashboard") then table.insert(resources, deployment("kubeoptix-dashboard", namespace, instance, images.dashboard, {{ name = "HARVESTER_API_URL", value = "http://kubeoptix-harvester:8000" }, { name = "ANALYZER_API_URL", value = "http://kubeoptix-analyzer:8000" }, { name = "CORE_AI_API_URL", value = "http://kubeoptix-core-ai:8000" }, { name = "SETTINGS_API_URL", value = "http://kubeoptix-configurations:8000" }, { name = "REPORTER_API_URL", value = "http://kubeoptix-reporter:8000" }}, nil)); table.insert(resources, service("kubeoptix-dashboard", namespace, instance)) end
+  if enabled(spec, "harvester") then table.insert(resources, statefulset("kubeoptix-harvester", namespace, instance, images.harvester, nil, shared_mount, data_claim)); table.insert(resources, service("kubeoptix-harvester", namespace, instance)) end
+  if enabled(spec, "analyzer") then table.insert(resources, statefulset("kubeoptix-analyzer", namespace, instance, images.analyzer, nil, shared_mount, data_claim)); table.insert(resources, service("kubeoptix-analyzer", namespace, instance)) end
+  if enabled(spec, "coreAi") then table.insert(resources, statefulset("kubeoptix-core-ai", namespace, instance, images.coreAi, nil, shared_mount, data_claim)); table.insert(resources, service("kubeoptix-core-ai", namespace, instance)) end
+  if enabled(spec, "reporter") then table.insert(resources, statefulset("kubeoptix-reporter", namespace, instance, images.reporter, {{ name = "CONFIGURATIONS_API_URL", value = "http://kubeoptix-configurations:8000" }}, shared_mount, data_claim)); table.insert(resources, service("kubeoptix-reporter", namespace, instance)) end
+  if enabled(spec, "dashboard") then table.insert(resources, statefulset("kubeoptix-dashboard", namespace, instance, images.dashboard, {{ name = "HARVESTER_API_URL", value = "http://kubeoptix-harvester:8000" }, { name = "ANALYZER_API_URL", value = "http://kubeoptix-analyzer:8000" }, { name = "CORE_AI_API_URL", value = "http://kubeoptix-core-ai:8000" }, { name = "SETTINGS_API_URL", value = "http://kubeoptix-configurations:8000" }, { name = "REPORTER_API_URL", value = "http://kubeoptix-reporter:8000" }}, nil)); table.insert(resources, service("kubeoptix-dashboard", namespace, instance)); table.insert(resources, route("kubeoptix-dashboard", namespace, instance)) end
   return resources, namespace
 end
 
@@ -174,9 +193,9 @@ local function update_status(resource, namespace)
   for _, name in ipairs({ "harvester", "analyzer", "coreAi", "configurations", "reporter", "dashboard" }) do
     if enabled(spec, name) then
       desired = desired + 1
-      local deployment_name = "kubeoptix-" .. (name == "coreAi" and "core-ai" or name)
-      local deployment = get_json("-n " .. shell_quote(namespace) .. " get deployment " .. shell_quote(deployment_name))
-      if deployment and deployment.status and deployment.status.readyReplicas and deployment.status.readyReplicas >= 1 then ready = ready + 1 end
+      local workload_name = "kubeoptix-" .. (name == "coreAi" and "core-ai" or name)
+      local workload = get_json("-n " .. shell_quote(namespace) .. " get statefulset " .. shell_quote(workload_name))
+      if workload and workload.status and workload.status.readyReplicas and workload.status.readyReplicas >= 1 then ready = ready + 1 end
     end
   end
   local phase = ready == desired and "Ready" or "Progressing"

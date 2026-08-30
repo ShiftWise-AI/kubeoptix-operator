@@ -4,29 +4,29 @@ metadata:
   name: shiftwise
   namespace: shiftwise-ai
 spec:
-  kubeoptix-harvester:
-    namespace:
-      create: true
-      name: shiftwise-ai
-    build:
+  targetNamespace: shiftwise-ai
+  images:
+    harvester: quay.io/shiftwise-ai/kubeoptix-harvester:latest
+    analyzer: quay.io/shiftwise-ai/kubeoptix-analyzer:latest
+    coreAi: quay.io/shiftwise-ai/kubeoptix-core-ai:latest
+    configurations: quay.io/shiftwise-ai/kubeoptix-configurations:latest
+    reporter: quay.io/shiftwise-ai/kubeoptix-reporter:latest
+    dashboard: quay.io/shiftwise-ai/kubeoptix-dashboard:latest
+    postgres: registry.redhat.io/rhel9/postgresql-16:latest
+  storage:
+    size: 10Gi
+  credentials:
+    existingSecret: kubeoptix-credentials
+  components:
+    harvester:
       enabled: true
-      source:
-        gitUri: https://github.com/ShiftWise-AI/kubeoptix-harvester.git
-        gitRef: feature/ocp
-      sourceSecret:
-        create: false
-        name: github-auth
-        username: x-access-token
-        token: ""
-  kubeoptix-analyzer:
-    namespace:
-      create: false
-      name: shiftwise-ai
-    build:
+    analyzer:
       enabled: true
-      source:
-        gitUri: https://github.com/ShiftWise-AI/kubeoptix-analyzer.git
-        gitRef: feature/ocp
-      sourceSecret:
-        create: false
-        name: github-auth
+    coreAi:
+      enabled: true
+    configurations:
+      enabled: true
+    reporter:
+      enabled: true
+    dashboard:
+      enabled: true

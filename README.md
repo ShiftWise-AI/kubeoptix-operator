@@ -1,19 +1,14 @@
 # shiftwise-operator
 
-Operator para OpenShift baseado nos charts Helm de:
-
-- kubeoptix-harvester
-- kubeoptix-analyzer
-
-O operator expõe o CRD `ShiftWise` (`shiftwises.shiftwise.ai`) e reconcilia os dois componentes via Helm Operator.
+Operador Kubernetes em Lua para a plataforma ShiftWise AI KubeOptix. Ele expõe o CRD `ShiftWise` (`shiftwises.shiftwise.ai`) e reconcilia a plataforma completa: Harvester, Analyzer, Core AI, Configurations, Reporter, Dashboard e PostgreSQL.
 
 ## Estrutura
 
-- `watches.yaml`: mapeia CRD `ShiftWise` para o chart umbrella `helm-charts/shiftwise`
-- `helm-charts/shiftwise`: chart principal que agrega os dois subcharts
+- `lua/shiftwise_operator.lua`: reconciliador Lua que usa `kubectl` in-cluster e `dkjson`
 - `config/crd/bases/shiftwise.ai_shiftwises.yaml`: definição do CRD
 - `config/manifests/shiftwise-operator.yaml`: deployment e RBAC do operator
 - `config/manifests/shiftwise-sample.yaml`: exemplo de CR
+- `config/manifests/kubeoptix-credentials-example.yaml`: Secret externo requerido pelo exemplo
 
 ## Build da imagem do operator
 
@@ -38,25 +33,24 @@ oc apply -f config/manifests/shiftwise-operator.yaml
 
 ```bash
 oc create namespace shiftwise-ai
+oc apply -f config/manifests/kubeoptix-credentials-example.yaml
 oc apply -f config/manifests/shiftwise-sample.yaml
 ```
 
 ## Customização do CR
 
-Tudo que estiver em `spec.kubeoptix-harvester` e `spec.kubeoptix-analyzer` é passado como values Helm para os respectivos subcharts.
+Defina `spec.targetNamespace`, as imagens em `spec.images`, o Secret em `spec.credentials.existingSecret` e o armazenamento em `spec.storage`. Todos os componentes são habilitados por padrão; desabilite um deles com `spec.components.<nome>.enabled: false`.
 
-Exemplos comuns:
+O volume compartilhado precisa suportar `ReadWriteMany`, pois Harvester, Analyzer, Core AI e Reporter compartilham `/app/data`. Use `spec.storage.existingClaim` quando o PVC já existir; caso contrário, o operador cria `kubeoptix-data` com 10Gi por padrão.
 
-- `spec.kubeoptix-harvester.build.source.gitUri`
-- `spec.kubeoptix-harvester.build.source.gitRef`
-- `spec.kubeoptix-harvester.image.repository`
-- `spec.kubeoptix-analyzer.build.source.gitUri`
-- `spec.kubeoptix-analyzer.image.repository`
+O Secret referenciado precisa conter `POSTGRESQL_USER`, `POSTGRESQL_PASSWORD`, `POSTGRESQL_DATABASE` e, quando o Analyzer usar LLM remoto, `LLM_API_KEY`. Nunca use o arquivo de exemplo em produção sem trocar os valores.
 
 ## Observações
 
-- O token GitHub foi removido dos values e deve ser injetado via CR/Secret.
-- Por padrão, o analyzer está configurado para não recriar ServiceAccount e ClusterRoleBinding, evitando conflito com o harvester no mesmo namespace.
+- O controlador registra eventos de reconciliação em JSON no stdout e atualiza `.status.phase` e `.status.readyComponents` em cada ciclo de 30 segundos.
+- A prontidão dos seis serviços é obtida a partir de `Deployment.status.readyReplicas`; isso oferece um sinal operacional sem depender de CRDs opcionais de monitoramento.
+- O Harvester recebe RBAC de leitura para os recursos que coleta, inclusive nós, workloads, rotas e recursos de monitoramento.
+- O operador usa imagens configuráveis. As referências `quay.io/shiftwise-ai/...` no exemplo devem existir e ser acessíveis ao cluster antes da instalação.
 
 ## Item 2: Bundle OLM (CSV + canal/pacote)
 

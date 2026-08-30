@@ -29,6 +29,80 @@ spec:
             spec:
               type: object
               properties:
+                targetNamespace:
+                  type: string
+                images:
+                  type: object
+                  properties:
+                    harvester:
+                      type: string
+                    analyzer:
+                      type: string
+                    coreAi:
+                      type: string
+                    configurations:
+                      type: string
+                    reporter:
+                      type: string
+                    dashboard:
+                      type: string
+                    postgres:
+                      type: string
+                storage:
+                  type: object
+                  properties:
+                    existingClaim:
+                      type: string
+                    size:
+                      type: string
+                    storageClassName:
+                      type: string
+                credentials:
+                  type: object
+                  properties:
+                    existingSecret:
+                      type: string
+                    postgresUser:
+                      type: string
+                    postgresPassword:
+                      type: string
+                    postgresDatabase:
+                      type: string
+                    llmApiKey:
+                      type: string
+                components:
+                  type: object
+                  properties:
+                    harvester:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                    analyzer:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                    coreAi:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                    configurations:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                    reporter:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                    dashboard:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
                 kubeoptix-harvester:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true

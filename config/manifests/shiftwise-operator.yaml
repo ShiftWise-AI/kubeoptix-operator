@@ -15,10 +15,13 @@ metadata:
   name: shiftwise-operator-manager-role
 rules:
   - apiGroups: [""]
-    resources: ["namespaces", "services", "serviceaccounts", "secrets", "persistentvolumeclaims", "events"]
+    resources: ["namespaces", "services", "serviceaccounts", "secrets", "configmaps", "persistentvolumeclaims", "events", "pods"]
     verbs: ["*"]
   - apiGroups: ["apps"]
-    resources: ["statefulsets"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["*"]
+  - apiGroups: ["autoscaling", "batch"]
+    resources: ["horizontalpodautoscalers", "jobs", "cronjobs"]
     verbs: ["*"]
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["clusterrolebindings"]
@@ -73,6 +76,8 @@ spec:
           image: quay.io/parraes/shiftwise-operator-system:0.1.0
           imagePullPolicy: IfNotPresent
           env:
+            - name: RECONCILE_INTERVAL_SECONDS
+              value: "30"
             - name: WATCH_NAMESPACE
               value: ""
             - name: OPERATOR_NAME
@@ -92,3 +97,13 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+          readinessProbe:
+            exec:
+              command: ["lua", "-e", "require('dkjson')"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["kubectl", "version", "--client"]
+            initialDelaySeconds: 15
+            periodSeconds: 30

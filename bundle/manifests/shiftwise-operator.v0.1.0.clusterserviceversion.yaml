@@ -58,11 +58,12 @@ metadata:
       ]
 spec:
   displayName: ShiftWise Operator
-  description: Operator para OpenShift que gerencia o stack ShiftWise (kubeoptix-harvester e kubeoptix-analyzer) via Helm.
+  description: Operator Lua que reconcilia o stack KubeOptix completo, incluindo coleta, análise, configurações, relatórios, dashboard e PostgreSQL.
   keywords:
     - shiftwise
     - openshift
-    - helm
+    - kubernetes
+    - lua
     - aiops
   maintainers:
     - name: parraes
@@ -83,7 +84,7 @@ spec:
         version: v1alpha1
         kind: ShiftWise
         displayName: ShiftWise
-        description: Configuração declarativa para provisionar os componentes harvester e analyzer.
+        description: Configuração declarativa para provisionar e monitorar todos os componentes KubeOptix.
   install:
     strategy: deployment
     spec:
@@ -92,10 +93,13 @@ spec:
         - serviceAccountName: shiftwise-operator-controller-manager
           rules:
             - apiGroups: [""]
-              resources: ["namespaces", "services", "serviceaccounts", "secrets", "persistentvolumeclaims", "events"]
+              resources: ["namespaces", "services", "serviceaccounts", "secrets", "configmaps", "persistentvolumeclaims", "events", "pods"]
               verbs: ["*"]
             - apiGroups: ["apps"]
-              resources: ["statefulsets"]
+              resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+              verbs: ["*"]
+            - apiGroups: ["autoscaling", "batch"]
+              resources: ["horizontalpodautoscalers", "jobs", "cronjobs"]
               verbs: ["*"]
             - apiGroups: ["rbac.authorization.k8s.io"]
               resources: ["clusterrolebindings"]

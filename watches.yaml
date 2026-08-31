@@ -1,5 +1,0 @@
-- version: v1alpha1
-  group: shiftwise.ai
-  kind: ShiftWise
-  chart: helm-charts/shiftwise
-  reconcilePeriod: 30s

@@ -1,9 +1,0 @@
-{{- if .Values.build.enabled }}
-apiVersion: image.openshift.io/v1
-kind: ImageStream
-metadata:
-  name: {{ .Values.build.imageStreamName }}
-  namespace: {{ include "kubeoptix-analyzer.namespace" . }}
-  labels:
-    {{- include "kubeoptix-analyzer.labels" . | nindent 4 }}
-{{- end }}

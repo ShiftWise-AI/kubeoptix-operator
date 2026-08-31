@@ -35,9 +35,7 @@ const (
 	ClusterReaderRole    = "cluster-reader"
 
 	DataClaimName       = "harvester-app-data"
-	GitSourceSecretName = "github-auth"
 	PostgresSecretName  = "kubeoptix-db"
-	LLMSecretName       = "llm"
 	DashboardConfigMap  = "kubeoptix-dashboard-env"
 	DashboardContainer  = "dashboard"
 

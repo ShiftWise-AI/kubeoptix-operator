@@ -62,7 +62,7 @@ func reconcileSharedServiceAccount(ctx context.Context, c client.Client, scheme 
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: objectMeta(constants.SharedServiceAccount, s.Namespace, labels(constants.HarvesterName, s.Instance)),
 	}
-	return apply(ctx, c, scheme, owner, sa)
+	return applyIfMissing(ctx, c, scheme, owner, sa)
 }
 
 func reconcileClusterReaderBinding(ctx context.Context, c client.Client, scheme *runtime.Scheme, name string, s Settings, ls map[string]string) error {

@@ -17,14 +17,8 @@ func TestFromCRDefaults(t *testing.T) {
 	if s.ClaimName != "harvester-app-data" {
 		t.Fatalf("claim = %q", s.ClaimName)
 	}
-	if s.GitSecret != "github-auth" {
-		t.Fatalf("git secret = %q", s.GitSecret)
-	}
 	if s.PostgresSecret != "kubeoptix-db" {
 		t.Fatalf("postgres secret = %q", s.PostgresSecret)
-	}
-	if s.LLMSecret != "llm" {
-		t.Fatalf("llm secret = %q", s.LLMSecret)
 	}
 	wantImage := "quay.io/parraes/kubeoptix-harvester:0.2.1"
 	if s.HarvesterImage != wantImage {
@@ -38,13 +32,17 @@ func TestFromCRDefaults(t *testing.T) {
 	}
 }
 
-func TestImageOverride(t *testing.T) {
+func TestFromCRStorage(t *testing.T) {
 	t.Parallel()
 	sw := newShiftWise()
-	sw.Spec.Images.Harvester = "quay.io/example/harvester:v1"
+	sw.Spec.Storage.Size = "50Gi"
+	sw.Spec.Storage.Name = "custom-data"
 	s := FromCR(sw)
-	if s.HarvesterImage != "quay.io/example/harvester:v1" {
-		t.Fatalf("override = %q", s.HarvesterImage)
+	if s.StorageSize != "50Gi" {
+		t.Fatalf("size = %q", s.StorageSize)
+	}
+	if s.ClaimName != "custom-data" {
+		t.Fatalf("claim = %q", s.ClaimName)
 	}
 }
 
@@ -59,6 +57,24 @@ func TestPhase(t *testing.T) {
 		if got != want {
 			t.Fatalf("got %q want %q", got, want)
 		}
+	}
+}
+
+func TestRandomAlphanum(t *testing.T) {
+	t.Parallel()
+	a, err := randomAlphanum(24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := randomAlphanum(24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(a) != 24 || len(b) != 24 {
+		t.Fatalf("len a=%d b=%d", len(a), len(b))
+	}
+	if a == b {
+		t.Fatal("generated identical passwords")
 	}
 }
 

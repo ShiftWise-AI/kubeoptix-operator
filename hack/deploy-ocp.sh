@@ -5,7 +5,7 @@
 #   ./hack/deploy-ocp.sh
 #   ./hack/deploy-ocp.sh --image quay.io/parraes/shiftwise-operator:0.2.1
 #   ./hack/deploy-ocp.sh --build --push --internal-registry
-#   ./hack/deploy-ocp.sh --with-credentials --with-instance
+#   ./hack/deploy-ocp.sh --with-instance
 #   ./hack/deploy-ocp.sh --undeploy
 #   ./hack/deploy-ocp.sh --undeploy --purge
 set -euo pipefail
@@ -29,7 +29,6 @@ TIMEOUT="${TIMEOUT:-${DEFAULT_TIMEOUT}}"
 DO_BUILD=false
 DO_PUSH=false
 INTERNAL_REGISTRY=false
-WITH_CREDENTIALS=false
 WITH_INSTANCE=false
 UNDEPLOY=false
 PURGE=false
@@ -49,7 +48,6 @@ Options:
   --build                  Build the operator image with ${CONTAINER_TOOL}
   --push                   Push the image after build (implies --build)
   --internal-registry      Push to the cluster internal registry and deploy that image
-  --with-credentials       Apply sample Secrets (kubeoptix-db, llm)
   --with-instance          Apply the sample ShiftWise CR
   --skip-wait              Do not wait for the operator Deployment to become ready
   --undeploy               Remove the operator (keeps CRD and namespace)
@@ -63,7 +61,7 @@ Examples:
   $(basename "$0")
   $(basename "$0") --build --push
   $(basename "$0") --build --push --internal-registry
-  $(basename "$0") --with-credentials --with-instance
+  $(basename "$0") --with-instance
   $(basename "$0") --undeploy --purge
 EOF
 }
@@ -97,10 +95,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --internal-registry)
       INTERNAL_REGISTRY=true
-      shift
-      ;;
-    --with-credentials)
-      WITH_CREDENTIALS=true
       shift
       ;;
     --with-instance)
@@ -294,14 +288,6 @@ wait_for_operator() {
   oc wait --for=condition=Available "deployment/${DEPLOYMENT}" -n "${NAMESPACE}" --timeout="${TIMEOUT}"
 }
 
-apply_credentials() {
-  local file="${ROOT_DIR}/config/samples/kubeoptix-credentials-example.yaml"
-  require_file "${file}"
-  warn "sample secrets contain placeholders; replace them before starting builds"
-  log "applying credentials from ${file}"
-  oc apply -f "${file}"
-}
-
 apply_instance() {
   local file="${ROOT_DIR}/config/samples/shiftwise.ai_v1alpha1_shiftwise.yaml"
   require_file "${file}"
@@ -334,10 +320,6 @@ fi
 
 apply_operator
 wait_for_operator
-
-if [[ "${WITH_CREDENTIALS}" == true ]]; then
-  apply_credentials
-fi
 
 if [[ "${WITH_INSTANCE}" == true ]]; then
   apply_instance

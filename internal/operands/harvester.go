@@ -27,7 +27,7 @@ func ReconcileHarvester(ctx context.Context, c client.Client, scheme *runtime.Sc
 	if err := apply(ctx, c, scheme, owner, apiService(constants.HarvesterAPIService, s.Namespace, name, name, 8000, ls)); err != nil {
 		return err
 	}
-	if err := applyUnstructured(ctx, c, route(constants.HarvesterRoute, s.Namespace, constants.HarvesterAPIService, "http", "edge", "Redirect", ls, nil)); err != nil {
+	if err := deleteRoute(ctx, c, constants.HarvesterRoute, s.Namespace); err != nil {
 		return err
 	}
 	if err := applyMaxReplicaPolicy(ctx, c, scheme, name+"-max-replicas", s.Namespace, name, 1, ls); err != nil {

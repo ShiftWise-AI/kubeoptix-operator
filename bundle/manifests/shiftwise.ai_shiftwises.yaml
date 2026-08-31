@@ -30,9 +30,9 @@ spec:
         - name: Ready
           type: string
           jsonPath: .status.readyComponents
-        - name: Target
+        - name: Storage
           type: string
-          jsonPath: .spec.targetNamespace
+          jsonPath: .spec.storage.size
         - name: Age
           type: date
           jsonPath: .metadata.creationTimestamp
@@ -51,28 +51,8 @@ spec:
               description: ShiftWiseSpec defines the desired state of a ShiftWise platform instance.
               type: object
               properties:
-                targetNamespace:
-                  description: OpenShift project where KubeOptix components are created.
-                  type: string
-                  default: shiftwise-ai
-                images:
-                  type: object
-                  properties:
-                    harvester:
-                      type: string
-                    analyzer:
-                      type: string
-                    coreAi:
-                      type: string
-                    configurations:
-                      type: string
-                    reporter:
-                      type: string
-                    dashboard:
-                      type: string
-                    postgres:
-                      type: string
                 storage:
+                  description: Shared PVC used by Harvester, Analyzer, Core AI and Reporter. PostgreSQL credentials are generated automatically.
                   type: object
                   properties:
                     existingClaim:
@@ -87,73 +67,6 @@ spec:
                       type: array
                       items:
                         type: string
-                gitSource:
-                  type: object
-                  properties:
-                    existingSecret:
-                      type: string
-                credentials:
-                  type: object
-                  properties:
-                    existingSecret:
-                      type: string
-                    postgresUser:
-                      type: string
-                    postgresPassword:
-                      type: string
-                    postgresDatabase:
-                      type: string
-                    llmExistingSecret:
-                      type: string
-                    llmApiKey:
-                      type: string
-                    llmBaseUrl:
-                      type: string
-                    llmModel:
-                      type: string
-                    cursorApiKey:
-                      type: string
-                    cursorModel:
-                      type: string
-                components:
-                  type: object
-                  properties:
-                    harvester:
-                      type: object
-                      properties:
-                        enabled:
-                          type: boolean
-                          default: true
-                    analyzer:
-                      type: object
-                      properties:
-                        enabled:
-                          type: boolean
-                          default: true
-                    coreAi:
-                      type: object
-                      properties:
-                        enabled:
-                          type: boolean
-                          default: true
-                    configurations:
-                      type: object
-                      properties:
-                        enabled:
-                          type: boolean
-                          default: true
-                    reporter:
-                      type: object
-                      properties:
-                        enabled:
-                          type: boolean
-                          default: true
-                    dashboard:
-                      type: object
-                      properties:
-                        enabled:
-                          type: boolean
-                          default: true
             status:
               description: ShiftWiseStatus defines the observed state of ShiftWise.
               type: object

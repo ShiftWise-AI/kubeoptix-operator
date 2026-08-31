@@ -1,7 +1,10 @@
 package operands
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func route(name, namespace, service, targetPort, termination, insecure string, ls map[string]string, extraAnnotations map[string]string) *unstructured.Unstructured {
@@ -30,4 +33,12 @@ func route(name, namespace, service, targetPort, termination, insecure string, l
 	}
 	_ = unstructured.SetNestedMap(u.Object, spec, "spec")
 	return u
+}
+
+func deleteRoute(ctx context.Context, c client.Client, name, namespace string) error {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(gvk("route.openshift.io", "v1", "Route"))
+	u.SetName(name)
+	u.SetNamespace(namespace)
+	return DeleteIgnoreMissing(ctx, c, u)
 }

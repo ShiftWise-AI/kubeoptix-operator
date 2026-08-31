@@ -2,6 +2,8 @@ package operands
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,10 +19,8 @@ import (
 func ReconcilePostgres(ctx context.Context, c client.Client, scheme *runtime.Scheme, owner client.Object, s Settings) error {
 	name := constants.PostgresName
 	ls := labels(name, name)
-	if s.CreatePostgres {
-		if err := applyIfMissing(ctx, c, scheme, owner, postgresSecret(s, ls)); err != nil {
-			return err
-		}
+	if err := applyIfMissing(ctx, c, scheme, owner, postgresSecret(s, ls)); err != nil {
+		return err
 	}
 	sa := &corev1.ServiceAccount{ObjectMeta: objectMeta(name, s.Namespace, ls)}
 	if err := apply(ctx, c, scheme, owner, sa); err != nil {
@@ -46,9 +46,9 @@ func ReconcilePostgres(ctx context.Context, c client.Client, scheme *runtime.Sch
 }
 
 func postgresSecret(s Settings, ls map[string]string) *corev1.Secret {
-	password := s.PostgresPassword
-	if password == "" {
-		password = "change-me-before-production"
+	password, err := randomAlphanum(24)
+	if err != nil {
+		password = fmt.Sprintf("kubeoptix-%s", s.Instance)
 	}
 	return &corev1.Secret{
 		ObjectMeta: objectMeta(s.PostgresSecret, s.Namespace, ls),
@@ -59,6 +59,18 @@ func postgresSecret(s Settings, ls map[string]string) *corev1.Secret {
 			"POSTGRESQL_DATABASE": s.PostgresDatabase,
 		},
 	}
+}
+
+func randomAlphanum(n int) (string, error) {
+	const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	for i := range b {
+		b[i] = alphabet[int(b[i])%len(alphabet)]
+	}
+	return string(b), nil
 }
 
 func postgresSTS(s Settings, ls map[string]string) *appsv1.StatefulSet {

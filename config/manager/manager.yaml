@@ -30,7 +30,7 @@ spec:
       containers:
         - name: manager
           image: quay.io/parraes/shiftwise-operator:0.2.1
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           args:
             - --metrics-bind-address=:8080
             - --health-probe-bind-address=:8081

@@ -8,77 +8,6 @@ import (
 )
 
 // DeepCopyInto copies the receiver into out.
-func (in *ComponentSpec) DeepCopyInto(out *ComponentSpec) {
-	*out = *in
-	if in.Enabled != nil {
-		in, out := &in.Enabled, &out.Enabled
-		*out = new(bool)
-		**out = **in
-	}
-}
-
-// DeepCopy returns a copy of ComponentSpec.
-func (in *ComponentSpec) DeepCopy() *ComponentSpec {
-	if in == nil {
-		return nil
-	}
-	out := new(ComponentSpec)
-	in.DeepCopyInto(out)
-	return out
-}
-
-// DeepCopyInto copies the receiver into out.
-func (in *ComponentsSpec) DeepCopyInto(out *ComponentsSpec) {
-	*out = *in
-	in.Harvester.DeepCopyInto(&out.Harvester)
-	in.Analyzer.DeepCopyInto(&out.Analyzer)
-	in.CoreAI.DeepCopyInto(&out.CoreAI)
-	in.Configurations.DeepCopyInto(&out.Configurations)
-	in.Reporter.DeepCopyInto(&out.Reporter)
-	in.Dashboard.DeepCopyInto(&out.Dashboard)
-}
-
-// DeepCopy returns a copy of ComponentsSpec.
-func (in *ComponentsSpec) DeepCopy() *ComponentsSpec {
-	if in == nil {
-		return nil
-	}
-	out := new(ComponentsSpec)
-	in.DeepCopyInto(out)
-	return out
-}
-
-// DeepCopyInto copies the receiver into out.
-func (in *CredentialsSpec) DeepCopyInto(out *CredentialsSpec) {
-	*out = *in
-}
-
-// DeepCopy returns a copy of CredentialsSpec.
-func (in *CredentialsSpec) DeepCopy() *CredentialsSpec {
-	if in == nil {
-		return nil
-	}
-	out := new(CredentialsSpec)
-	in.DeepCopyInto(out)
-	return out
-}
-
-// DeepCopyInto copies the receiver into out.
-func (in *ImagesSpec) DeepCopyInto(out *ImagesSpec) {
-	*out = *in
-}
-
-// DeepCopy returns a copy of ImagesSpec.
-func (in *ImagesSpec) DeepCopy() *ImagesSpec {
-	if in == nil {
-		return nil
-	}
-	out := new(ImagesSpec)
-	in.DeepCopyInto(out)
-	return out
-}
-
-// DeepCopyInto copies the receiver into out.
 func (in *ShiftWise) DeepCopyInto(out *ShiftWise) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
@@ -140,11 +69,7 @@ func (in *ShiftWiseList) DeepCopyObject() runtime.Object {
 // DeepCopyInto copies the receiver into out.
 func (in *ShiftWiseSpec) DeepCopyInto(out *ShiftWiseSpec) {
 	*out = *in
-	out.Images = in.Images
 	in.Storage.DeepCopyInto(&out.Storage)
-	out.Credentials = in.Credentials
-	out.GitSource = in.GitSource
-	in.Components.DeepCopyInto(&out.Components)
 }
 
 // DeepCopy returns a copy of ShiftWiseSpec.
@@ -175,20 +100,6 @@ func (in *ShiftWiseStatus) DeepCopy() *ShiftWiseStatus {
 		return nil
 	}
 	out := new(ShiftWiseStatus)
-	in.DeepCopyInto(out)
-	return out
-}
-
-// DeepCopyInto copies the receiver into out.
-func (in *GitSourceSpec) DeepCopyInto(out *GitSourceSpec) {
-	*out = *in
-}
-
-func (in *GitSourceSpec) DeepCopy() *GitSourceSpec {
-	if in == nil {
-		return nil
-	}
-	out := new(GitSourceSpec)
 	in.DeepCopyInto(out)
 	return out
 }

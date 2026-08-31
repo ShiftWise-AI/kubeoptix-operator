@@ -4,7 +4,7 @@ metadata:
   name: shiftwise-operator.v0.2.1
   namespace: placeholder
   annotations:
-    alm-examples: "[\n  {\n    \"apiVersion\": \"shiftwise.ai/v1alpha1\",\n    \"kind\": \"ShiftWise\",\n    \"metadata\": {\n      \"name\": \"shiftwise\",\n      \"namespace\": \"shiftwise-ai\"\n    },\n    \"spec\": {\n      \"targetNamespace\": \"shiftwise-ai\",\n      \"gitSource\": {\n        \"existingSecret\": \"github-auth\"\n      },\n      \"storage\": {\n        \"name\": \"harvester-app-data\",\n        \"size\": \"10Gi\",\n        \"accessModes\": [\n          \"ReadWriteOnce\"\n        ]\n      },\n      \"credentials\": {\n        \"existingSecret\": \"kubeoptix-db\",\n        \"llmExistingSecret\": \"llm\"\n      },\n      \"components\": {\n        \"harvester\": {\n          \"enabled\": true\n        },\n        \"analyzer\": {\n          \"enabled\": true\n        },\n        \"coreAi\": {\n          \"enabled\": true\n        },\n        \"configurations\": {\n          \"enabled\": true\n        },\n        \"reporter\": {\n          \"enabled\": true\n        },\n        \"dashboard\": {\n          \"enabled\": true\n        }\n      }\n    }\n  }\n]"
+    alm-examples: "[\n  {\n    \"apiVersion\": \"shiftwise.ai/v1alpha1\",\n    \"kind\": \"ShiftWise\",\n    \"metadata\": {\n      \"name\": \"shiftwise\",\n      \"namespace\": \"shiftwise-ai\"\n    },\n    \"spec\": {\n      \"storage\": {\n        \"name\": \"harvester-app-data\",\n        \"size\": \"10Gi\",\n        \"accessModes\": [\n          \"ReadWriteOnce\"\n        ]\n      }\n    }\n  }\n]"
     capabilities: Basic Install
     categories: AI/Machine Learning,OpenShift Optional
     containerImage: quay.io/parraes/shiftwise-operator:0.2.1
@@ -119,6 +119,14 @@ spec:
           - update
           - patch
           - delete
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterroles
+          resourceNames:
+          - cluster-reader
+          verbs:
+          - bind
         - apiGroups:
           - policy
           resources:

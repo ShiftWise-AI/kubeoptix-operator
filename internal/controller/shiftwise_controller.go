@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -33,6 +34,7 @@ type ShiftWiseReconciler struct {
 // +kubebuilder:rbac:groups="",resources=services;serviceaccounts;secrets;configmaps;persistentvolumeclaims;events;pods,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets;daemonsets;replicasets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cluster-reader,verbs=bind
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingadmissionpolicies;validatingadmissionpolicybindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
@@ -105,14 +107,14 @@ func (r *ShiftWiseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 	if recErr != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, recErr
+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
 	}
 	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func (r *ShiftWiseReconciler) fail(ctx context.Context, instance *shiftwisev1alpha1.ShiftWise, recErr error) (ctrl.Result, error) {
 	_ = r.patchStatus(ctx, instance, "Error", "0/0", recErr.Error())
-	return ctrl.Result{RequeueAfter: requeueAfter}, recErr
+	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func (r *ShiftWiseReconciler) cleanup(ctx context.Context, settings operands.Settings) error {
@@ -125,15 +127,17 @@ func (r *ShiftWiseReconciler) cleanup(ctx context.Context, settings operands.Set
 }
 
 func (r *ShiftWiseReconciler) patchStatus(ctx context.Context, instance *shiftwisev1alpha1.ShiftWise, phase, ready, message string) error {
-	latest := &shiftwisev1alpha1.ShiftWise{}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(instance), latest); err != nil {
-		return err
-	}
-	latest.Status.Phase = phase
-	latest.Status.ReadyComponents = ready
-	latest.Status.Message = message
-	latest.Status.ObservedGeneration = latest.Generation
-	return r.Status().Update(ctx, latest)
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		latest := &shiftwisev1alpha1.ShiftWise{}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(instance), latest); err != nil {
+			return err
+		}
+		latest.Status.Phase = phase
+		latest.Status.ReadyComponents = ready
+		latest.Status.Message = message
+		latest.Status.ObservedGeneration = latest.Generation
+		return r.Status().Update(ctx, latest)
+	})
 }
 
 func (r *ShiftWiseReconciler) SetupWithManager(mgr ctrl.Manager) error {

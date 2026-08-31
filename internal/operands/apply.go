@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -28,30 +29,32 @@ func apply(ctx context.Context, c client.Client, scheme *runtime.Scheme, owner c
 	if err := setOwner(scheme, owner, obj); err != nil {
 		return err
 	}
-	existing := obj.DeepCopyObject().(client.Object)
-	err := c.Get(ctx, client.ObjectKeyFromObject(obj), existing)
-	if apierrors.IsNotFound(err) {
-		if err := c.Create(ctx, obj); err != nil {
-			return fmt.Errorf("create %s/%s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		existing := obj.DeepCopyObject().(client.Object)
+		err := c.Get(ctx, client.ObjectKeyFromObject(obj), existing)
+		if apierrors.IsNotFound(err) {
+			if err := c.Create(ctx, obj); err != nil {
+				return fmt.Errorf("create %s/%s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
+			}
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		obj.SetResourceVersion(existing.GetResourceVersion())
+		if svc, ok := obj.(*corev1.Service); ok {
+			if current, ok := existing.(*corev1.Service); ok {
+				svc.Spec.ClusterIP = current.Spec.ClusterIP
+				svc.Spec.ClusterIPs = current.Spec.ClusterIPs
+				svc.Spec.IPFamilies = current.Spec.IPFamilies
+				svc.Spec.IPFamilyPolicy = current.Spec.IPFamilyPolicy
+			}
+		}
+		if err := c.Update(ctx, obj); err != nil {
+			return fmt.Errorf("update %s/%s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 		}
 		return nil
-	}
-	if err != nil {
-		return err
-	}
-	obj.SetResourceVersion(existing.GetResourceVersion())
-	if svc, ok := obj.(*corev1.Service); ok {
-		if current, ok := existing.(*corev1.Service); ok {
-			svc.Spec.ClusterIP = current.Spec.ClusterIP
-			svc.Spec.ClusterIPs = current.Spec.ClusterIPs
-			svc.Spec.IPFamilies = current.Spec.IPFamilies
-			svc.Spec.IPFamilyPolicy = current.Spec.IPFamilyPolicy
-		}
-	}
-	if err := c.Update(ctx, obj); err != nil {
-		return fmt.Errorf("update %s/%s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
-	}
-	return nil
+	})
 }
 
 func applyIfMissing(ctx context.Context, c client.Client, scheme *runtime.Scheme, owner client.Object, obj client.Object) error {

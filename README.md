@@ -6,14 +6,14 @@ O namespace padrão é **`shiftwise-ai`**. A imagem do manager é construída co
 
 O reconciler materializa o inventário, nesta ordem:
 
-1. Harvester (PVC `harvester-app-data`, SA `shiftwisea-ai-user`, ClusterRoleBinding `cluster-reader`, Service, Route, StatefulSet)
+1. Harvester (PVC `harvester-app-data`, SA `shiftwisea-ai-user`, ClusterRoleBinding `cluster-reader`, Service, StatefulSet)
 2. Configurations (PostgreSQL `kubeoptix-db` + API, PDB, StatefulSet)
-3. Analyzer (Secret `llm`, Service, Route, scale policy, StatefulSet)
+3. Analyzer (Service, scale policy, StatefulSet)
 4. Core AI (Service, StatefulSet)
 5. Reporter (SA compartilhada, ClusterRoleBinding, Service, PDB, scale policy, StatefulSet)
-6. Dashboard (ConfigMap `.env.openshift`, Service, Route, scale policy, StatefulSet)
+6. Dashboard (ConfigMap `.env.openshift`, Service, Route pública, scale policy, StatefulSet)
 
-Imagens padrão vêm do Quay (`quay.io/parraes/kubeoptix-<componente>:0.2.1`). Sobrescreva com `spec.images`. O PostgreSQL continua em `registry.redhat.io`.
+Imagens vêm do Quay (`quay.io/parraes/kubeoptix-<componente>:0.2.1`). O PostgreSQL usa `registry.redhat.io`; usuário, senha e database do Secret `kubeoptix-db` são gerados automaticamente.
 
 ## Estrutura
 
@@ -26,7 +26,7 @@ config/crd/            CustomResourceDefinition
 config/rbac/           ServiceAccount, ClusterRole, leader election
 config/manager/        Deployment no namespace shiftwise-ai
 config/default/        kustomize (instalação completa)
-config/samples/        CR de exemplo + Secret
+config/samples/        CR de exemplo
 config/manifests/      YAML único para oc apply
 Containerfile          build UBI (Podman)
 ```
@@ -63,20 +63,11 @@ O operador sobe no projeto `shiftwise-ai`.
 ## Instância ShiftWise
 
 ```bash
-oc apply -f config/samples/kubeoptix-credentials-example.yaml
 oc apply -f config/samples/shiftwise.ai_v1alpha1_shiftwise.yaml
 oc get shiftwises -n shiftwise-ai
 ```
 
-`spec.targetNamespace` padrão: `shiftwise-ai`. Desabilite um componente com `spec.components.<nome>.enabled: false`.
-
-Crie os Secrets de exemplo (troque os placeholders) **antes** de criar o CR:
-
-```bash
-oc apply -f config/samples/kubeoptix-credentials-example.yaml
-```
-
-O Secret `kubeoptix-db` precisa de `POSTGRESQL_USER`, `POSTGRESQL_PASSWORD` e `POSTGRESQL_DATABASE`. O Secret `llm` alimenta o Analyzer (`CURSOR_*` e `LLM_*`).
+O único campo opcional do CR é `spec.storage` (tamanho, StorageClass, claim existente). Componentes, imagens e credenciais PostgreSQL são preenchidos pelo operator.
 
 ## Desenvolvimento local
 

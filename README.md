@@ -1,79 +1,95 @@
-# shiftwise-operator
+# ShiftWise Operator
 
-Operador Kubernetes/OpenShift em **Go** para a plataforma ShiftWise AI KubeOptix. Expõe o CRD `ShiftWise` (`shiftwises.shiftwise.ai`) e será responsável por reconciliar Harvester, Analyzer, Core AI, Configurations, Reporter, Dashboard e PostgreSQL.
+Operador OpenShift da plataforma **KubeOptix**. Instale pelo OperatorHub, crie um `ShiftWise` e o Dashboard fica disponível numa Route.
 
-O namespace padrão é **`shiftwise-ai`**. A imagem do manager é construída com **UBI 9** (`ubi9/go-toolset` + `ubi9/ubi-minimal`).
+Componentes (Harvester, Analyzer, Core AI, Configurations, Reporter, Dashboard e PostgreSQL) sobem no projeto `shiftwise-ai`. Só o Dashboard tem rota pública. Imagens vêm do Quay; as credenciais do banco são geradas automaticamente.
 
-O reconciler materializa o inventário, nesta ordem:
+---
 
-1. Harvester (PVC `harvester-app-data`, SA `shiftwisea-ai-user`, ClusterRoleBinding `cluster-reader`, Service, StatefulSet)
-2. Configurations (PostgreSQL `kubeoptix-db` + API, PDB, StatefulSet)
-3. Analyzer (Service, scale policy, StatefulSet)
-4. Core AI (Service, StatefulSet)
-5. Reporter (SA compartilhada, ClusterRoleBinding, Service, PDB, scale policy, StatefulSet)
-6. Dashboard (ConfigMap `.env.openshift`, Service, Route pública, scale policy, StatefulSet)
+## 1. Catalogo no cluster
 
-Imagens vêm do Quay (`quay.io/parraes/kubeoptix-<componente>:0.2.1`). O PostgreSQL usa `registry.redhat.io`; usuário, senha e database do Secret `kubeoptix-db` são gerados automaticamente.
-
-## Estrutura
-
-```
-api/v1alpha1/          CRD ShiftWise (Go types)
-cmd/main.go            entrypoint do controller-runtime
-internal/controller/   reconciler
-internal/constants/    namespace, nomes e imagens padrão
-config/crd/            CustomResourceDefinition
-config/rbac/           ServiceAccount, ClusterRole, leader election
-config/manager/        Deployment no namespace shiftwise-ai
-config/default/        kustomize (instalação completa)
-config/samples/        CR de exemplo
-config/manifests/      YAML único para oc apply
-Containerfile          build UBI (Podman)
-```
-
-## Pré-requisitos
-
-- Go 1.24+
-- Podman
-- `oc` autenticado em um cluster OpenShift
-
-## Build da imagem
+Com `oc` autenticado como administrador:
 
 ```bash
-make image-build IMG=quay.io/parraes/shiftwise-operator:0.2.1
-make image-push  IMG=quay.io/parraes/shiftwise-operator:0.2.1
+oc apply -f config/olm/catalogsource.yaml
 ```
 
-## Instalação no OpenShift
+Aguarde o catalogo ficar **READY**:
 
 ```bash
-make deploy
-# equivalente:
-oc apply -k config/default
+oc get catalogsource shiftwise-operator-catalog -n openshift-marketplace
 ```
 
-Ou com o manifesto único:
+**Print 1 — CatalogSource READY no OpenShift**
 
-```bash
-oc apply -f config/manifests/shiftwise-operator.yaml
-```
+![CatalogSource READY](docs/images/01-catalogsource.png)
 
-O operador sobe no projeto `shiftwise-ai`.
+---
 
-## Instância ShiftWise
+## 2. Instalar pelo OperatorHub
+
+1. Na consola, abra **Operators → OperatorHub**.
+2. No filtro de fontes, marque **ShiftWise Operator Catalog**.
+3. Busque **ShiftWise Operator** e abra o tile.
+4. Clique em **Install** e confirme. O namespace sugerido é `shiftwise-ai`.
+
+**Print 2 — OperatorHub, busca do ShiftWise Operator**
+
+![OperatorHub](docs/images/02-operatorhub.png)
+
+**Print 3 — Tela de instalação do operator**
+
+![Install](docs/images/03-install.png)
+
+---
+
+## 3. Achar o operator instalado
+
+**Operators → Installed Operators**. No seletor de projeto, use `shiftwise-ai` ou **All Projects** e abra **ShiftWise Operator**.
+
+**Print 4 — Installed Operators**
+
+![Installed Operators](docs/images/04-installed-operators.png)
+
+---
+
+## 4. Criar uma instância ShiftWise
+
+Na página do operator, confirme que o projeto é **`shiftwise-ai`**. Depois: aba **ShiftWise → Create ShiftWise**.
+
+O único campo que importa é **storage** (tamanho do volume compartilhado). O resto o operator preenche.
+
+**Print 5 — Formulário Create ShiftWise**
+
+![Create ShiftWise](docs/images/05-create-shiftwise.png)
+
+Aguarde a instância ficar **Ready**.
+
+**Print 6 — Instância Ready**
+
+![ShiftWise Ready](docs/images/06-shiftwise-ready.png)
+
+Pela CLI:
 
 ```bash
 oc apply -f config/samples/shiftwise.ai_v1alpha1_shiftwise.yaml
-oc get shiftwises -n shiftwise-ai
+oc get shiftwises -A
 ```
 
-O único campo opcional do CR é `spec.storage` (tamanho, StorageClass, claim existente). Componentes, imagens e credenciais PostgreSQL são preenchidos pelo operator.
+---
 
-## Desenvolvimento local
+## 5. Abrir o Dashboard
+
+**Networking → Routes**, projeto `shiftwise-ai`. A rota é `kubeoptix-dashboard`.
+
+**Print 7 — Route do Dashboard**
+
+![Route Dashboard](docs/images/07-dashboard-route.png)
 
 ```bash
-make test
-make run
+oc get route kubeoptix-dashboard -n shiftwise-ai
 ```
 
-`WATCH_NAMESPACE` vazio (padrão) observa todos os namespaces. Defina o valor para restringir o cache a um único projeto.
+---
+
+Os prints acima devem ficar em `docs/images/` com os nomes indicados em cada seção.

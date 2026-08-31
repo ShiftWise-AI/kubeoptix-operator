@@ -37,13 +37,6 @@ func ReconcileConfigurations(ctx context.Context, c client.Client, scheme *runti
 	if err := apply(ctx, c, scheme, owner, pdb); err != nil {
 		return err
 	}
-	if err := applyUnstructured(ctx, c, imageStream(name, s.Namespace, ls, false)); err != nil {
-		return err
-	}
-	bc := gitBuildConfig(name, s.Namespace, constants.ConfigurationsGitURI, constants.GitRef, s.GitSecret, constants.Containerfile, name+":"+constants.ImageTag, ls, "Serial", nil, configChangeTriggers())
-	if err := applyUnstructured(ctx, c, bc); err != nil {
-		return err
-	}
 	return apply(ctx, c, scheme, owner, configurationsSTS(s, ls))
 }
 
@@ -55,11 +48,6 @@ func configurationsSTS(s Settings, ls map[string]string) *appsv1.StatefulSet {
 			ServiceName: constants.ConfigurationsAPIService,
 			Replicas:    replicas(1),
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"image.openshift.io/triggers": `[{"from":{"kind":"ImageStreamTag","name":"kubeoptix-configurations:latest","namespace":"` + s.Namespace + `"},"fieldPath":"spec.template.spec.containers[?(@.name==\"kubeoptix-configurations\")].image"}]`,
-					},
-				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: name,
 					Containers: []corev1.Container{{

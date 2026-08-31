@@ -5,8 +5,13 @@ metadata:
   namespace: shiftwise-ai
 spec:
   targetNamespace: shiftwise-ai
-  gitSource:
-    existingSecret: github-auth
+  images:
+    harvester: quay.io/parraes/kubeoptix-harvester:0.2.1
+    analyzer: quay.io/parraes/kubeoptix-analyzer:0.2.1
+    coreAi: quay.io/parraes/kubeoptix-core-ai:0.2.1
+    configurations: quay.io/parraes/kubeoptix-configurations:0.2.1
+    reporter: quay.io/parraes/kubeoptix-reporter:0.2.1
+    dashboard: quay.io/parraes/kubeoptix-dashboard:0.2.1
   storage:
     name: harvester-app-data
     size: 10Gi

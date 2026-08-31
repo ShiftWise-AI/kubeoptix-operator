@@ -26,7 +26,7 @@ func TestFromCRDefaults(t *testing.T) {
 	if s.LLMSecret != "llm" {
 		t.Fatalf("llm secret = %q", s.LLMSecret)
 	}
-	wantImage := "image-registry.openshift-image-registry.svc:5000/shiftwise-ai/kubeoptix-harvester:latest"
+	wantImage := "quay.io/parraes/kubeoptix-harvester:0.2.1"
 	if s.HarvesterImage != wantImage {
 		t.Fatalf("harvester image = %q, want %q", s.HarvesterImage, wantImage)
 	}

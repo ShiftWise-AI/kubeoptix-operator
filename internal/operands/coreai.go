@@ -17,13 +17,6 @@ func ReconcileCoreAI(ctx context.Context, c client.Client, scheme *runtime.Schem
 	if err := apply(ctx, c, scheme, owner, apiService(constants.CoreAIAPIService, s.Namespace, name, name, 8000, ls)); err != nil {
 		return err
 	}
-	if err := applyUnstructured(ctx, c, imageStream(name, s.Namespace, ls, true)); err != nil {
-		return err
-	}
-	bc := gitBuildConfig(name, s.Namespace, constants.CoreAIGitURI, constants.GitRef, s.GitSecret, constants.Containerfile, name+":"+constants.ImageTag, ls, "Serial", resourceQuantityMap("200m", "128Mi", "1", "1Gi"), configChangeTriggers())
-	if err := applyUnstructured(ctx, c, bc); err != nil {
-		return err
-	}
 	return apply(ctx, c, scheme, owner, coreAISTS(s, ls))
 }
 

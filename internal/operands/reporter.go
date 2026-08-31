@@ -36,13 +36,6 @@ func ReconcileReporter(ctx context.Context, c client.Client, scheme *runtime.Sch
 	if err := apply(ctx, c, scheme, owner, pdb); err != nil {
 		return err
 	}
-	if err := applyUnstructured(ctx, c, imageStream(name, s.Namespace, ls, true)); err != nil {
-		return err
-	}
-	bc := gitBuildConfig(name, s.Namespace, constants.ReporterGitURI, constants.GitRef, s.GitSecret, constants.Containerfile, name+":"+constants.ImageTag, ls, "SerialLatestOnly", resourceQuantityMap("200m", "128Mi", "1", "1Gi"), []interface{}{map[string]interface{}{"type": "ConfigChange"}})
-	if err := applyUnstructured(ctx, c, bc); err != nil {
-		return err
-	}
 	if err := applyExactReplicaPolicy(ctx, c, scheme, name, s.Namespace, name, "object.spec.replicas == 1", "KubeOptix Reporter must run with exactly one replica.", ls, false); err != nil {
 		return err
 	}

@@ -39,12 +39,6 @@ func ReconcileDashboard(ctx context.Context, c client.Client, scheme *runtime.Sc
 	})); err != nil {
 		return err
 	}
-	if err := applyUnstructured(ctx, c, imageStream(name, s.Namespace, ls, true)); err != nil {
-		return err
-	}
-	if err := applyUnstructured(ctx, c, binaryBuildConfig(name, s.Namespace, constants.Containerfile, name+":"+constants.ImageTag, ls)); err != nil {
-		return err
-	}
 	if err := applyExactReplicaPolicy(ctx, c, scheme, name+"-single-replica", s.Namespace, name,
 		"has(object.spec.replicas) && object.spec.replicas == 1",
 		"The kubeoptix-dashboard StatefulSet must run with exactly one replica.",
@@ -82,9 +76,6 @@ func dashboardSTS(s Settings, ls map[string]string) *appsv1.StatefulSet {
 					Labels: map[string]string{
 						"app.kubernetes.io/name":    name,
 						"app.kubernetes.io/part-of": constants.AppName,
-					},
-					Annotations: map[string]string{
-						"image.openshift.io/triggers": `[{"from":{"kind":"ImageStreamTag","name":"kubeoptix-dashboard:latest","namespace":"` + s.Namespace + `"},"fieldPath":"spec.template.spec.containers[?(@.name==\"dashboard\")].image"}]`,
 					},
 				},
 				Spec: corev1.PodSpec{

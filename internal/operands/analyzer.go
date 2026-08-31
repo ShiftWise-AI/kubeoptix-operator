@@ -25,13 +25,6 @@ func ReconcileAnalyzer(ctx context.Context, c client.Client, scheme *runtime.Sch
 	if err := applyUnstructured(ctx, c, route(constants.AnalyzerRoute, s.Namespace, constants.AnalyzerAPIService, "http", "edge", "Redirect", ls, nil)); err != nil {
 		return err
 	}
-	if err := applyUnstructured(ctx, c, imageStream(name, s.Namespace, ls, false)); err != nil {
-		return err
-	}
-	bc := gitBuildConfig(name, s.Namespace, constants.AnalyzerGitURI, constants.GitRef, s.GitSecret, constants.Containerfile, name+":"+constants.ImageTag, ls, "Serial", nil, nil)
-	if err := applyUnstructured(ctx, c, bc); err != nil {
-		return err
-	}
 	if err := applyMaxReplicaPolicy(ctx, c, scheme, name+"-max-replicas", s.Namespace, name, 1, ls); err != nil {
 		return err
 	}

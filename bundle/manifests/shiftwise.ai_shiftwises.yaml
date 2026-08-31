@@ -56,7 +56,6 @@ spec:
                   type: string
                   default: shiftwise-ai
                 images:
-                  description: Optional image overrides. Empty fields default to quay.io/parraes/kubeoptix-<component>:0.2.1.
                   type: object
                   properties:
                     harvester:

@@ -7,8 +7,8 @@ const (
 	ManagedBy        = "shiftwise-operator"
 	Finalizer        = "shiftwise.ai/cleanup"
 
-	InternalRegistry = "image-registry.openshift-image-registry.svc:5000"
-	ImageTag         = "latest"
+	QuayRegistry     = "quay.io/parraes"
+	ImageTag         = "0.2.1"
 	PullAlways       = "Always"
 	PullIfNotPresent = "IfNotPresent"
 
@@ -47,14 +47,6 @@ const (
 	DefaultPostgresImage = "registry.redhat.io/rhel9/postgresql-18:9.8-1787043471"
 	DefaultPostgresUser  = "kubeoptix"
 	DefaultPostgresDB    = "kubeoptix"
-
-	HarvesterGitURI      = "https://github.com/ShiftWise-AI/kubeoptix-harvester.git"
-	ConfigurationsGitURI = "https://github.com/ShiftWise-AI/kubeoptix-configurations.git"
-	AnalyzerGitURI       = "https://github.com/ShiftWise-AI/kubeoptix-analyzer.git"
-	CoreAIGitURI         = "https://github.com/ShiftWise-AI/kubeoptix-core-ai.git"
-	ReporterGitURI       = "https://github.com/ShiftWise-AI/kubeoptix-reporter.git"
-	GitRef               = "main"
-	Containerfile        = "Containerfile"
 
 	ReconcileInterval = 30
 )

@@ -14,6 +14,7 @@ type ShiftWiseSpec struct {
 	TargetNamespace string `json:"targetNamespace,omitempty"`
 
 	// Images overrides the container images used for each component.
+	// Empty fields default to quay.io/parraes/kubeoptix-<component>:0.2.1.
 	Images ImagesSpec `json:"images,omitempty"`
 
 	// Storage configures the shared PVC used by Harvester, Analyzer, Core AI and Reporter.
@@ -22,16 +23,16 @@ type ShiftWiseSpec struct {
 	// Credentials references or inlines PostgreSQL and LLM secrets.
 	Credentials CredentialsSpec `json:"credentials,omitempty"`
 
-	// GitSource is the OpenShift build source-secret used by BuildConfigs.
+	// GitSource is unused. Operand images are pulled from Quay, not built in-cluster.
 	GitSource GitSourceSpec `json:"gitSource,omitempty"`
 
 	// Components toggles individual KubeOptix workloads. All are enabled by default.
 	Components ComponentsSpec `json:"components,omitempty"`
 }
 
-// GitSourceSpec points at the kubernetes.io/basic-auth Secret consumed by BuildConfigs.
+// GitSourceSpec is retained for compatibility and is ignored by the operator.
 type GitSourceSpec struct {
-	// ExistingSecret is the name of a basic-auth Secret (default github-auth).
+	// ExistingSecret is ignored. Operand images are pulled from Quay.
 	ExistingSecret string `json:"existingSecret,omitempty"`
 }
 

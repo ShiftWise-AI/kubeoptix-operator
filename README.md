@@ -4,16 +4,16 @@ Operador Kubernetes/OpenShift em **Go** para a plataforma ShiftWise AI KubeOptix
 
 O namespace padrão é **`shiftwise-ai`**. A imagem do manager é construída com **UBI 9** (`ubi9/go-toolset` + `ubi9/ubi-minimal`).
 
-O reconciler materializa o inventário Helm, nesta ordem:
+O reconciler materializa o inventário, nesta ordem:
 
-1. Harvester (PVC `harvester-app-data`, SA `shiftwisea-ai-user`, ClusterRoleBinding `cluster-reader`, Service, Route, ImageStream, BuildConfig, ValidatingAdmissionPolicy, StatefulSet)
-2. Configurations (PostgreSQL `kubeoptix-db` + API, PDB, ImageStream, BuildConfig)
-3. Analyzer (Secret `llm`, Service, Route, ImageStream, BuildConfig, scale policy, StatefulSet)
-4. Core AI (Service, ImageStream, BuildConfig, StatefulSet)
-5. Reporter (SA compartilhada, ClusterRoleBinding, Service, PDB, ImageStream, BuildConfig, scale policy, StatefulSet)
-6. Dashboard (ConfigMap `.env.openshift`, Service, Route, ImageStream, BuildConfig binário, scale policy, StatefulSet)
+1. Harvester (PVC `harvester-app-data`, SA `shiftwisea-ai-user`, ClusterRoleBinding `cluster-reader`, Service, Route, StatefulSet)
+2. Configurations (PostgreSQL `kubeoptix-db` + API, PDB, StatefulSet)
+3. Analyzer (Secret `llm`, Service, Route, scale policy, StatefulSet)
+4. Core AI (Service, StatefulSet)
+5. Reporter (SA compartilhada, ClusterRoleBinding, Service, PDB, scale policy, StatefulSet)
+6. Dashboard (ConfigMap `.env.openshift`, Service, Route, scale policy, StatefulSet)
 
-Imagens padrão vêm do ImageStream interno (`image-registry.openshift-image-registry.svc:5000/<ns>/<stream>:latest`). Sobrescreva com `spec.images`.
+Imagens padrão vêm do Quay (`quay.io/parraes/kubeoptix-<componente>:0.2.1`). Sobrescreva com `spec.images`. O PostgreSQL continua em `registry.redhat.io`.
 
 ## Estrutura
 
@@ -70,13 +70,13 @@ oc get shiftwises -n shiftwise-ai
 
 `spec.targetNamespace` padrão: `shiftwise-ai`. Desabilite um componente com `spec.components.<nome>.enabled: false`.
 
-Crie os Secrets de exemplo (troque os placeholders) e o Secret `github-auth` (basic-auth) **antes** de disparar os BuildConfigs:
+Crie os Secrets de exemplo (troque os placeholders) **antes** de criar o CR:
 
 ```bash
 oc apply -f config/samples/kubeoptix-credentials-example.yaml
 ```
 
-O Secret `kubeoptix-db` precisa de `POSTGRESQL_USER`, `POSTGRESQL_PASSWORD` e `POSTGRESQL_DATABASE`. O Secret `llm` alimenta o Analyzer (`CURSOR_*` e `LLM_*`). O Dashboard usa BuildConfig do tipo Binary: após o operator criar o BC, rode `oc start-build kubeoptix-dashboard --from-dir=<repo-dashboard> -n shiftwise-ai`.
+O Secret `kubeoptix-db` precisa de `POSTGRESQL_USER`, `POSTGRESQL_PASSWORD` e `POSTGRESQL_DATABASE`. O Secret `llm` alimenta o Analyzer (`CURSOR_*` e `LLM_*`).
 
 ## Desenvolvimento local
 

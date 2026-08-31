@@ -49,7 +49,7 @@ Options:
   --build                  Build the operator image with ${CONTAINER_TOOL}
   --push                   Push the image after build (implies --build)
   --internal-registry      Push to the cluster internal registry and deploy that image
-  --with-credentials       Apply sample Secrets (kubeoptix-db, llm, github-auth)
+  --with-credentials       Apply sample Secrets (kubeoptix-db, llm)
   --with-instance          Apply the sample ShiftWise CR
   --skip-wait              Do not wait for the operator Deployment to become ready
   --undeploy               Remove the operator (keeps CRD and namespace)

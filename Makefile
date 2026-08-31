@@ -81,6 +81,37 @@ image-push: ## Push operator image.
 embed-icon: ## Encode config/manifests/logo.png into the ClusterServiceVersion.
 	bash "$(CURDIR)/hack/embed-operator-icon.sh"
 
+BUNDLE_IMG ?= quay.io/parraes/shiftwise-operator-bundle:v$(VERSION)
+CATALOG_IMG ?= quay.io/parraes/shiftwise-operator-catalog:v$(VERSION)
+
+.PHONY: bundle
+bundle: ## Generate OLM bundle manifests from the current VERSION.
+	python3 "$(CURDIR)/hack/generate-olm.py"
+
+.PHONY: bundle-build
+bundle-build: bundle ## Build the OLM bundle image.
+	$(CONTAINER_TOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+.PHONY: bundle-push
+bundle-push: ## Push the OLM bundle image.
+	$(CONTAINER_TOOL) push $(BUNDLE_IMG)
+
+.PHONY: catalog-build
+catalog-build: bundle ## Build the file-based catalog image.
+	$(CONTAINER_TOOL) build -f catalog.Dockerfile -t $(CATALOG_IMG) .
+
+.PHONY: catalog-push
+catalog-push: ## Push the catalog image.
+	$(CONTAINER_TOOL) push $(CATALOG_IMG)
+
+.PHONY: catalog-deploy
+catalog-deploy: ## Apply CatalogSource in openshift-marketplace and restart the catalog pod.
+	$(KUBECTL) apply -f config/olm/catalogsource.yaml
+	@echo "waiting for catalog ServiceAccount..."
+	@$(KUBECTL) wait --for=jsonpath='{.metadata.name}'=shiftwise-operator-catalog sa/shiftwise-operator-catalog -n openshift-marketplace --timeout=60s >/dev/null 2>&1 || true
+	-$(KUBECTL) secrets link shiftwise-operator-catalog shiftwise-quay --for=pull -n openshift-marketplace
+	$(KUBECTL) delete pod -n openshift-marketplace -l olm.catalogSource=shiftwise-operator-catalog --ignore-not-found=true
+
 ##@ Deployment
 
 .PHONY: install

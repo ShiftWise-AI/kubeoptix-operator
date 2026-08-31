@@ -83,13 +83,12 @@ func FromCR(sw *shiftwisev1alpha1.ShiftWise) Settings {
 	if len(s.AccessModes) == 0 {
 		s.AccessModes = []string{"ReadWriteOnce"}
 	}
-	ns := s.Namespace
-	s.HarvesterImage = imageOrBuild(sw.Spec.Images.Harvester, ns, constants.HarvesterName)
-	s.AnalyzerImage = imageOrBuild(sw.Spec.Images.Analyzer, ns, constants.AnalyzerName)
-	s.CoreAIImage = imageOrBuild(sw.Spec.Images.CoreAI, ns, constants.CoreAIName)
-	s.ConfigurationsImage = imageOrBuild(sw.Spec.Images.Configurations, ns, constants.ConfigurationsName)
-	s.ReporterImage = imageOrBuild(sw.Spec.Images.Reporter, ns, constants.ReporterName)
-	s.DashboardImage = imageOrBuild(sw.Spec.Images.Dashboard, ns, constants.DashboardName)
+	s.HarvesterImage = imageOrDefault(sw.Spec.Images.Harvester, constants.HarvesterName)
+	s.AnalyzerImage = imageOrDefault(sw.Spec.Images.Analyzer, constants.AnalyzerName)
+	s.CoreAIImage = imageOrDefault(sw.Spec.Images.CoreAI, constants.CoreAIName)
+	s.ConfigurationsImage = imageOrDefault(sw.Spec.Images.Configurations, constants.ConfigurationsName)
+	s.ReporterImage = imageOrDefault(sw.Spec.Images.Reporter, constants.ReporterName)
+	s.DashboardImage = imageOrDefault(sw.Spec.Images.Dashboard, constants.DashboardName)
 	if sw.Spec.Images.Postgres != "" {
 		s.PostgresImage = sw.Spec.Images.Postgres
 	} else {
@@ -98,15 +97,11 @@ func FromCR(sw *shiftwisev1alpha1.ShiftWise) Settings {
 	return s
 }
 
-func imageOrBuild(override, namespace, stream string) string {
+func imageOrDefault(override, name string) string {
 	if override != "" {
 		return override
 	}
-	return InternalImage(namespace, stream)
-}
-
-func InternalImage(namespace, stream string) string {
-	return constants.InternalRegistry + "/" + namespace + "/" + stream + ":" + constants.ImageTag
+	return constants.QuayRegistry + "/" + name + ":" + constants.ImageTag
 }
 
 func firstNonEmpty(values ...string) string {

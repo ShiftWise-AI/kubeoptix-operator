@@ -1,0 +1,17 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: shiftwise-operator-catalog
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: quay.io/parraes/shiftwise-operator-catalog:v0.2.1
+  displayName: ShiftWise Operator Catalog
+  publisher: ShiftWise AI
+  secrets:
+    - shiftwise-quay
+  grpcPodConfig:
+    securityContextConfig: restricted
+  updateStrategy:
+    registryPoll:
+      interval: 10m

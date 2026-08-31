@@ -343,7 +343,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: manager
-          image: quay.io/parraes/shiftwise-operator:0.2.0
+          image: quay.io/parraes/shiftwise-operator:0.2.1
           imagePullPolicy: IfNotPresent
           args:
             - --metrics-bind-address=:8080

@@ -1,15 +1,18 @@
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/parraes/shiftwise-operator:0.2.0
-VERSION ?= 0.2.0
+IMG ?= quay.io/parraes/shiftwise-operator:0.2.1
+VERSION ?= 0.2.1
 NAMESPACE ?= shiftwise-ai
 
 CONTAINER_TOOL ?= podman
 CONTAINERFILE ?= Containerfile
 
+# Avoid requiring a local Go toolchain for deploy/image targets.
+ifeq ($(shell command -v go >/dev/null 2>&1 && echo go),go)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
+endif
 endif
 
 ifeq ($(shell command -v oc >/dev/null 2>&1 && echo oc),oc)
@@ -74,6 +77,10 @@ image-build: ## Build operator image with Podman using UBI.
 image-push: ## Push operator image.
 	$(CONTAINER_TOOL) push ${IMG}
 
+.PHONY: embed-icon
+embed-icon: ## Encode config/manifests/logo.png into the ClusterServiceVersion.
+	bash "$(CURDIR)/hack/embed-operator-icon.sh"
+
 ##@ Deployment
 
 .PHONY: install
@@ -88,9 +95,17 @@ uninstall: ## Remove CRDs from the cluster.
 deploy: ## Deploy the operator into shiftwise-ai.
 	$(KUBECTL) apply -k config/default
 
+.PHONY: deploy-ocp
+deploy-ocp: ## Deploy the operator to OpenShift (oc login required). Extra args: ARGS='--build --push'
+	bash "$(CURDIR)/hack/deploy-ocp.sh" $(ARGS)
+
 .PHONY: undeploy
 undeploy: ## Remove the operator from the cluster.
 	$(KUBECTL) delete --ignore-not-found=true -k config/default
+
+.PHONY: undeploy-ocp
+undeploy-ocp: ## Remove the operator from OpenShift. Extra args: ARGS='--purge'
+	bash "$(CURDIR)/hack/deploy-ocp.sh" --undeploy $(ARGS)
 
 ##@ Dependencies
 

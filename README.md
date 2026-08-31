@@ -40,8 +40,8 @@ Containerfile          build UBI (Podman)
 ## Build da imagem
 
 ```bash
-make image-build IMG=quay.io/parraes/shiftwise-operator:0.2.0
-make image-push  IMG=quay.io/parraes/shiftwise-operator:0.2.0
+make image-build IMG=quay.io/parraes/shiftwise-operator:0.2.1
+make image-push  IMG=quay.io/parraes/shiftwise-operator:0.2.1
 ```
 
 ## Instalação no OpenShift

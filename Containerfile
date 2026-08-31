@@ -3,7 +3,7 @@
 
 ARG GO_TOOLSET_IMAGE=registry.access.redhat.com/ubi9/go-toolset:1.24
 ARG RUNTIME_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:latest
-ARG VERSION=0.2.0
+ARG VERSION=0.2.1
 
 FROM ${GO_TOOLSET_IMAGE} AS builder
 

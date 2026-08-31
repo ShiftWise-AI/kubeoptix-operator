@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shiftwise-ai
+  labels:
+    app.kubernetes.io/name: shiftwise-operator
+    app.kubernetes.io/part-of: kubeoptix
+    app.kubernetes.io/managed-by: shiftwise-operator
+    openshift.io/cluster-monitoring: "true"

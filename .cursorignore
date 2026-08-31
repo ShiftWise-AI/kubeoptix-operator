@@ -1,0 +1,32 @@
+# Build artifacts and local caches — keep source, CRDs and manifests indexed
+bin/
+dist/
+vendor/
+.go/
+.gocache/
+.gomodcache/
+testbin/
+.envtest-binaries/
+cover.out
+coverage.out
+*.coverprofile
+*.test
+/manager
+
+# Git internals
+.git/
+
+# IDE and editor metadata
+.idea/
+.vscode/
+*.iml
+.history/
+.settings/
+
+# Secrets and local kube configs
+.env
+.env.*
+*.pem
+*.key
+kubeconfig
+kubeconfig.*

@@ -1,0 +1,30 @@
+apiVersion: shiftwise.ai/v1alpha1
+kind: ShiftWise
+metadata:
+  name: shiftwise
+  namespace: shiftwise-ai
+spec:
+  targetNamespace: shiftwise-ai
+  gitSource:
+    existingSecret: github-auth
+  storage:
+    name: harvester-app-data
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+  credentials:
+    existingSecret: kubeoptix-db
+    llmExistingSecret: llm
+  components:
+    harvester:
+      enabled: true
+    analyzer:
+      enabled: true
+    coreAi:
+      enabled: true
+    configurations:
+      enabled: true
+    reporter:
+      enabled: true
+    dashboard:
+      enabled: true

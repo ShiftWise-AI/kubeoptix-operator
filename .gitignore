@@ -1,0 +1,74 @@
+# Binaries
+bin/
+dist/
+/manager
+*.test
+
+# Go
+*.out
+cover.out
+coverage.out
+*.coverprofile
+coverage.html
+vendor/
+.go/
+.gocache/
+.gomodcache/
+
+# Tests / envtest
+testbin/
+.envtest-binaries/
+
+# Tooling
+*.orig
+*.rej
+
+# Secrets and local overrides
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+kubeconfig
+kubeconfig.*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+Desktop.ini
+*~
+
+# Editors / IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.code-workspace
+.history/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.c9/
+nbproject/
+*.sublime-project
+*.sublime-workspace
+.atom/
+.nova/
+*.bak
+
+# Cursor
+.cursor/
+!.cursor/rules/
+
+# Buildah / Podman leftovers
+.container-diff/
+overlay-layers/
+
+# Local caches
+.cache/

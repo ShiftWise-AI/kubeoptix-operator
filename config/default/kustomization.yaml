@@ -1,0 +1,6 @@
+namespace: shiftwise-ai
+
+resources:
+  - ../crd
+  - ../rbac
+  - ../manager

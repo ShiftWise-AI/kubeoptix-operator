@@ -107,9 +107,6 @@ catalog-push: ## Push the catalog image.
 .PHONY: catalog-deploy
 catalog-deploy: ## Apply CatalogSource in openshift-marketplace and restart the catalog pod.
 	$(KUBECTL) apply -f config/olm/catalogsource.yaml
-	@echo "waiting for catalog ServiceAccount..."
-	@$(KUBECTL) wait --for=jsonpath='{.metadata.name}'=shiftwise-operator-catalog sa/shiftwise-operator-catalog -n openshift-marketplace --timeout=60s >/dev/null 2>&1 || true
-	-$(KUBECTL) secrets link shiftwise-operator-catalog shiftwise-quay --for=pull -n openshift-marketplace
 	$(KUBECTL) delete pod -n openshift-marketplace -l olm.catalogSource=shiftwise-operator-catalog --ignore-not-found=true
 
 ##@ Deployment

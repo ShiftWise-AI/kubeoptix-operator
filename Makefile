@@ -1,6 +1,6 @@
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/parraes/shiftwise-operator:0.2.1
-VERSION ?= 0.2.1
+IMG ?= quay.io/parraes/shiftwise-operator:0.2.2
+VERSION ?= 0.2.2
 NAMESPACE ?= shiftwise-ai
 
 CONTAINER_TOOL ?= podman
@@ -86,7 +86,7 @@ CATALOG_IMG ?= quay.io/parraes/shiftwise-operator-catalog:v$(VERSION)
 
 .PHONY: bundle
 bundle: ## Generate OLM bundle manifests from the current VERSION.
-	python3 "$(CURDIR)/hack/generate-olm.py"
+	VERSION=$(VERSION) python3 "$(CURDIR)/hack/generate-olm.py"
 
 .PHONY: bundle-build
 bundle-build: bundle ## Build the OLM bundle image.

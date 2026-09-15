@@ -20,7 +20,7 @@ func TestFromCRDefaults(t *testing.T) {
 	if s.PostgresSecret != "kubeoptix-db" {
 		t.Fatalf("postgres secret = %q", s.PostgresSecret)
 	}
-	wantImage := "quay.io/parraes/kubeoptix-harvester:0.2.1"
+	wantImage := "quay.io/parraes/kubeoptix-harvester:0.2.2"
 	if s.HarvesterImage != wantImage {
 		t.Fatalf("harvester image = %q, want %q", s.HarvesterImage, wantImage)
 	}

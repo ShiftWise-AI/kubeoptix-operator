@@ -13,7 +13,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-DEFAULT_IMG="quay.io/parraes/shiftwise-operator:0.2.1"
+DEFAULT_IMG="quay.io/parraes/shiftwise-operator:0.2.2"
 DEFAULT_NAMESPACE="shiftwise-ai"
 DEFAULT_TIMEOUT="180s"
 DEPLOYMENT="shiftwise-operator-controller-manager"
@@ -22,7 +22,7 @@ CONTAINERFILE="${CONTAINERFILE:-Containerfile}"
 
 IMG="${IMG:-${DEFAULT_IMG}}"
 NAMESPACE="${NAMESPACE:-${DEFAULT_NAMESPACE}}"
-VERSION="${VERSION:-0.2.1}"
+VERSION="${VERSION:-0.2.2}"
 CONTAINER_TOOL="${CONTAINER_TOOL:-podman}"
 TIMEOUT="${TIMEOUT:-${DEFAULT_TIMEOUT}}"
 

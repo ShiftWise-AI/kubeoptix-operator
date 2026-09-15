@@ -8,7 +8,7 @@ const (
 	Finalizer        = "shiftwise.ai/cleanup"
 
 	QuayRegistry     = "quay.io/parraes"
-	ImageTag         = "0.2.1"
+	ImageTag         = "0.2.2"
 	PullAlways       = "Always"
 	PullIfNotPresent = "IfNotPresent"
 

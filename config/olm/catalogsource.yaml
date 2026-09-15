@@ -5,7 +5,7 @@ metadata:
   namespace: openshift-marketplace
 spec:
   sourceType: grpc
-  image: quay.io/parraes/shiftwise-operator-catalog:v0.2.1
+  image: quay.io/parraes/shiftwise-operator-catalog:v0.2.2
   displayName: ShiftWise Operator Catalog
   publisher: ShiftWise AI
   secrets:

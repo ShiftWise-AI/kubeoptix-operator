@@ -1,13 +1,13 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: shiftwise-operator.v0.2.1
+  name: shiftwise-operator.v0.2.2
   namespace: placeholder
   annotations:
     alm-examples: "[\n  {\n    \"apiVersion\": \"shiftwise.ai/v1alpha1\",\n    \"kind\": \"ShiftWise\",\n    \"metadata\": {\n      \"name\": \"shiftwise\",\n      \"namespace\": \"shiftwise-ai\"\n    },\n    \"spec\": {\n      \"storage\": {\n        \"name\": \"harvester-app-data\",\n        \"size\": \"10Gi\",\n        \"accessModes\": [\n          \"ReadWriteOnce\"\n        ]\n      }\n    }\n  }\n]"
     capabilities: Basic Install
     categories: AI/Machine Learning,OpenShift Optional
-    containerImage: quay.io/parraes/shiftwise-operator:0.2.1
+    containerImage: quay.io/parraes/shiftwise-operator:0.2.2
     createdAt: '2026-08-31T00:00:00Z'
     description: ShiftWise operator that reconciles the KubeOptix platform on OpenShift.
     operators.operatorframework.io/suggested-namespace: shiftwise-ai
@@ -28,7 +28,7 @@ spec:
     name: ShiftWise AI
   maturity: alpha
   minKubeVersion: 1.26.0
-  version: 0.2.1
+  version: 0.2.2
   links:
   - name: ShiftWise Operator
     url: https://github.com/ShiftWise-AI/kubeoptix-operator
@@ -53,7 +53,7 @@ spec:
       description: "Inst\xE2ncia da plataforma KubeOptix gerenciada pelo ShiftWise Operator."
   relatedImages:
   - name: manager
-    image: quay.io/parraes/shiftwise-operator:0.2.1
+    image: quay.io/parraes/shiftwise-operator:0.2.2
   install:
     strategy: deployment
     spec:
@@ -260,8 +260,8 @@ spec:
                   type: RuntimeDefault
               containers:
               - name: manager
-                image: quay.io/parraes/shiftwise-operator:0.2.1
-                imagePullPolicy: IfNotPresent
+                image: quay.io/parraes/shiftwise-operator:0.2.2
+                imagePullPolicy: Always
                 args:
                 - --metrics-bind-address=:8080
                 - --health-probe-bind-address=:8081

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import shutil
 from copy import deepcopy
 from pathlib import Path
@@ -11,7 +12,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.2.1"
+VERSION = os.environ.get("VERSION", "0.2.2")
 PACKAGE = "shiftwise-operator"
 CSV_NAME = f"{PACKAGE}.v{VERSION}"
 OPERATOR_IMG = f"quay.io/parraes/shiftwise-operator:{VERSION}"

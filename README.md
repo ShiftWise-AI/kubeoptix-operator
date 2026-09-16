@@ -28,7 +28,7 @@ oc get catalogsource shiftwise-operator-catalog -n openshift-marketplace
 
 ## 2. Instalar pelo OperatorHub
 
-1. Na consola, abra **Operators → OperatorHub**.
+1. Na console, abra **Operators → OperatorHub**.
 2. No filtro de fontes, marque **ShiftWise Operator Catalog**.
 3. Busque **ShiftWise Operator** e abra o tile.
 4. Clique em **Install** e confirme. O namespace sugerido é `shiftwise-ai`.

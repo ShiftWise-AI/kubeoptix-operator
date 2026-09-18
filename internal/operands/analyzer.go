@@ -43,6 +43,7 @@ func analyzerSTS(s Settings, ls map[string]string) *appsv1.StatefulSet {
 							envVar("HOME", "/tmp"),
 							envVar("KUBECONFIG", "/tmp/kubeconfig"),
 							envVar("ENV", "openshift"),
+							envVar("SYSTEM_SETTINGS_URL", "http://" + constants.ConfigurationsAPIService + ":8000"),
 							envVar("TZ", "America/Sao_Paulo"),
 						},
 						Ports:        []corev1.ContainerPort{{Name: "http", ContainerPort: 8000, Protocol: corev1.ProtocolTCP}},

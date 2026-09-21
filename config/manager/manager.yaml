@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: manager
-          image: quay.io/parraes/shiftwise-operator:0.2.2
+          image: default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:1.0.0
           imagePullPolicy: Always
           args:
             - --metrics-bind-address=:8080

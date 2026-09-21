@@ -5,7 +5,7 @@ metadata:
   namespace: openshift-marketplace
 spec:
   sourceType: grpc
-  image: quay.io/parraes/shiftwise-operator-catalog:v0.2.2
+  image: default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator-catalog:v1.0.0
   displayName: ShiftWise Operator Catalog
   publisher: ShiftWise AI
   grpcPodConfig:

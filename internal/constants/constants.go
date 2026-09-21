@@ -7,10 +7,11 @@ const (
 	ManagedBy        = "shiftwise-operator"
 	Finalizer        = "shiftwise.ai/cleanup"
 
-	QuayRegistry     = "quay.io/parraes"
-	ImageTag         = "0.2.2"
-	PullAlways       = "Always"
-	PullIfNotPresent = "IfNotPresent"
+	ImageRegistry         = "default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai"
+	ConfigurationsRegistry = "default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai"
+	ImageTag              = "1.0.0"
+	PullAlways            = "Always"
+	PullIfNotPresent      = "IfNotPresent"
 
 	HarvesterName      = "kubeoptix-harvester"
 	AnalyzerName       = "kubeoptix-analyzer"

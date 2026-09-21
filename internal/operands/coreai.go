@@ -43,6 +43,7 @@ func coreAISTS(s Settings, ls map[string]string) *appsv1.StatefulSet {
 						Env: []corev1.EnvVar{
 							envVar("HOME", "/tmp"),
 							envVar("KUBECONFIG", "/tmp/.kube/config"),
+							envVar("KUBEOPTIX_ML_ENABLED", "true"),
 							envVar("TZ", "America/Sao_Paulo"),
 							envVar("LOG_LEVEL", "INFO"),
 							envVar("PORT", "8000"),

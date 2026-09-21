@@ -56,12 +56,12 @@ func FromCR(sw *shiftwisev1alpha1.ShiftWise) Settings {
 		Reporter:       true,
 		Dashboard:      true,
 
-		HarvesterImage:      quayImage(constants.HarvesterName),
-		AnalyzerImage:       quayImage(constants.AnalyzerName),
-		CoreAIImage:         quayImage(constants.CoreAIName),
-		ConfigurationsImage: quayImage(constants.ConfigurationsName),
-		ReporterImage:       quayImage(constants.ReporterName),
-		DashboardImage:      quayImage(constants.DashboardName),
+		HarvesterImage:      registryImage(constants.HarvesterName),
+		AnalyzerImage:       registryImage(constants.AnalyzerName),
+		CoreAIImage:         registryImage(constants.CoreAIName),
+		ConfigurationsImage: constants.ConfigurationsRegistry + "/" + constants.ConfigurationsName + ":" + constants.ImageTag,
+		ReporterImage:       registryImage(constants.ReporterName),
+		DashboardImage:      registryImage(constants.DashboardName),
 		PostgresImage:       constants.DefaultPostgresImage,
 	}
 	if len(s.AccessModes) == 0 {
@@ -70,8 +70,8 @@ func FromCR(sw *shiftwisev1alpha1.ShiftWise) Settings {
 	return s
 }
 
-func quayImage(name string) string {
-	return constants.QuayRegistry + "/" + name + ":" + constants.ImageTag
+func registryImage(name string) string {
+	return constants.ImageRegistry + "/" + name + ":" + constants.ImageTag
 }
 
 func firstNonEmpty(values ...string) string {

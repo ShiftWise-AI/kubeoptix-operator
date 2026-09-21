@@ -12,11 +12,11 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = os.environ.get("VERSION", "0.2.2")
+VERSION = os.environ.get("VERSION", "1.0.0")
 PACKAGE = "shiftwise-operator"
 CSV_NAME = f"{PACKAGE}.v{VERSION}"
-OPERATOR_IMG = f"quay.io/parraes/shiftwise-operator:{VERSION}"
-BUNDLE_IMG = f"quay.io/parraes/shiftwise-operator-bundle:v{VERSION}"
+OPERATOR_IMG = f"default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:{VERSION}"
+BUNDLE_IMG = f"default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator-bundle:v{VERSION}"
 SA = "shiftwise-operator-controller-manager"
 
 

@@ -1,84 +1,84 @@
 # ShiftWise Operator
 
-Operador OpenShift da plataforma **KubeOptix**. Instale pelo OperatorHub, crie um `ShiftWise` e o Dashboard fica disponível numa Route.
+OpenShift operator for the **KubeOptix** platform. Install it from OperatorHub, create a `ShiftWise` instance, and the Dashboard becomes available through a Route.
 
-Componentes (Harvester, Analyzer, Core AI, Configurations, Reporter, Dashboard e PostgreSQL) sobem no projeto `shiftwise-ai`. Só o Dashboard tem rota pública. Imagens vêm do Quay; as credenciais do banco são geradas automaticamente.
+Components (Harvester, Analyzer, Core AI, Configurations, Reporter, Dashboard, and PostgreSQL) come up in the `shiftwise-ai` project. Only the Dashboard has a public route. Images come from Quay; database credentials are generated automatically.
 
 ---
 
-## 1. Catalogo no cluster
+## 1. Catalog on the cluster
 
-Com `oc` autenticado como administrador (cluster-admin), rode o script de instalação — ele cria o namespace `shiftwise-ai`, builda e publica as imagens do operator/bundle/catalogo no registry interno, concede as permissões de RBAC necessárias e aplica o `CatalogSource`:
+With `oc` authenticated as an administrator (cluster-admin), run the installation script — it creates the `shiftwise-ai` namespace, builds and publishes the operator/bundle/catalog images to the internal registry, grants the required RBAC permissions, and applies the `CatalogSource`:
 
 ```bash
 ./hack/install-catalog.sh
 ```
 
-> **Importante:** só rodar `oc apply -f config/olm/catalogsource.yaml` **não é suficiente**. O `CatalogSource` referencia uma imagem no registry interno (`shiftwise-ai/shiftwise-operator-catalog`) que precisa existir e ser buildada/enviada antes, e o pod do catálogo (que roda em `openshift-marketplace`) precisa de permissão explícita (`system:image-puller`) para puxar imagens do namespace `shiftwise-ai`. Sem isso o pod fica em `ImagePullBackOff` com erro `authentication required` e o operator nunca aparece no OperatorHub. O `hack/install-catalog.sh` cuida de tudo isso automaticamente.
+> **Important:** simply running `oc apply -f config/olm/catalogsource.yaml` is **not enough**. The `CatalogSource` references an image in the internal registry (`shiftwise-ai/shiftwise-operator-catalog`) that must exist and be built/pushed beforehand, and the catalog pod (which runs in `openshift-marketplace`) needs explicit permission (`system:image-puller`) to pull images from the `shiftwise-ai` namespace. Without this the pod stays in `ImagePullBackOff` with an `authentication required` error and the operator never shows up in OperatorHub. `hack/install-catalog.sh` takes care of all of this automatically.
 
-Se as imagens já foram publicadas anteriormente e você só quer reaplicar o `CatalogSource`/RBAC (sem rebuild):
+If the images have already been published before and you only want to re-apply the `CatalogSource`/RBAC (without rebuilding):
 
 ```bash
 ./hack/install-catalog.sh --skip-build
 ```
 
-Ao final, o script confirma que o `CatalogSource` está **READY** e que o pacote aparece no `PackageManifest`:
+At the end, the script confirms that the `CatalogSource` is **READY** and that the package shows up in the `PackageManifest`:
 
 ```bash
 oc get catalogsource shiftwise-operator-catalog -n openshift-marketplace
 oc get packagemanifest -n openshift-marketplace | grep shiftwise
 ```
 
-**Print 1 — CatalogSource READY no OpenShift**
+**Screenshot 1 — CatalogSource READY on OpenShift**
 
 ![CatalogSource READY](docs/images/01-catalogsource.png)
 
 ---
 
-## 2. Instalar pelo OperatorHub
+## 2. Install from OperatorHub
 
-1. Na console, abra **Operators → OperatorHub**.
-2. No filtro de fontes, marque **ShiftWise Operator Catalog**.
-3. Busque **ShiftWise Operator** e abra o tile.
-4. Clique em **Install** e confirme. O namespace sugerido é `shiftwise-ai`.
+1. In the console, open **Operators → OperatorHub**.
+2. In the source filter, check **ShiftWise Operator Catalog**.
+3. Search for **ShiftWise Operator** and open the tile.
+4. Click **Install** and confirm. The suggested namespace is `shiftwise-ai`.
 
-**Print 2 — OperatorHub, busca do ShiftWise Operator**
+**Screenshot 2 — OperatorHub, searching for ShiftWise Operator**
 
 ![OperatorHub](docs/images/02-operatorhub.png)
 
-**Print 3 — Tela de instalação do operator**
+**Screenshot 3 — Operator install screen**
 
 ![Install](docs/images/03-install.png)
 
 ---
 
-## 3. Achar o operator instalado
+## 3. Find the installed operator
 
-**Operators → Installed Operators**. No seletor de projeto, use `shiftwise-ai` ou **All Projects** e abra **ShiftWise Operator**.
+**Operators → Installed Operators**. In the project selector, use `shiftwise-ai` or **All Projects** and open **ShiftWise Operator**.
 
-**Print 4 — Installed Operators**
+**Screenshot 4 — Installed Operators**
 
 ![Installed Operators](docs/images/04-installed-operators.png)
 
 ---
 
-## 4. Criar uma instância ShiftWise
+## 4. Create a ShiftWise instance
 
-Na página do operator, confirme que o projeto é **`shiftwise-ai`**. Depois: aba **ShiftWise → Create ShiftWise**.
+On the operator page, confirm the project is **`shiftwise-ai`**. Then: **ShiftWise → Create ShiftWise** tab.
 
-O único campo que importa é **storage** (tamanho do volume compartilhado). O resto o operator preenche.
+The only field that matters is **storage** (size of the shared volume). The operator fills in the rest.
 
-**Print 5 — Formulário Create ShiftWise**
+**Screenshot 5 — Create ShiftWise form**
 
 ![Create ShiftWise](docs/images/05-create-shiftwise.png)
 
-Aguarde a instância ficar **Ready**.
+Wait for the instance to become **Ready**.
 
-**Print 6 — Instância Ready**
+**Screenshot 6 — Instance Ready**
 
 ![ShiftWise Ready](docs/images/06-shiftwise-ready.png)
 
-Pela CLI:
+Via CLI:
 
 ```bash
 oc apply -f config/samples/shiftwise.ai_v1alpha1_shiftwise.yaml
@@ -87,11 +87,11 @@ oc get shiftwises -A
 
 ---
 
-## 5. Abrir o Dashboard
+## 5. Open the Dashboard
 
-**Networking → Routes**, projeto `shiftwise-ai`. A rota é `kubeoptix-dashboard`.
+**Networking → Routes**, project `shiftwise-ai`. The route is `kubeoptix-dashboard`.
 
-**Print 7 — Route do Dashboard**
+**Screenshot 7 — Dashboard Route**
 
 ![Route Dashboard](docs/images/07-dashboard-route.png)
 
@@ -101,19 +101,19 @@ oc get route kubeoptix-dashboard -n shiftwise-ai
 
 ---
 
-## Troubleshooting: operator não aparece no OperatorHub
+## Troubleshooting: operator does not show up in OperatorHub
 
-Se o `ShiftWise Operator` não aparece na busca do OperatorHub, verifique o pod do catálogo:
+If the `ShiftWise Operator` does not appear in the OperatorHub search, check the catalog pod:
 
 ```bash
 oc get pods -n openshift-marketplace -l olm.catalogSource=shiftwise-operator-catalog
 oc describe pod -n openshift-marketplace -l olm.catalogSource=shiftwise-operator-catalog
 ```
 
-Causas mais comuns (todas resolvidas por `./hack/install-catalog.sh`):
+Most common causes (all resolved by `./hack/install-catalog.sh`):
 
-- **`ImagePullBackOff` / `authentication required`**: a imagem do catálogo não existe no registry interno (namespace `shiftwise-ai` não criado ou imagens não publicadas), ou o service account do pod em `openshift-marketplace` não tem a role `system:image-puller` no namespace `shiftwise-ai`.
-- **`CatalogSource` em `TRANSIENT_FAILURE`**: consequência direta do pod do catálogo não subir; corrija o pull de imagem acima e reinicie o pod (`oc delete pod -n openshift-marketplace -l olm.catalogSource=shiftwise-operator-catalog`).
-- **`PackageManifest` vazio** (`oc get packagemanifest -n openshift-marketplace | grep shiftwise`): aguarde alguns segundos após o `CatalogSource` ficar `READY` — a sincronização do OLM não é instantânea.
+- **`ImagePullBackOff` / `authentication required`**: the catalog image does not exist in the internal registry (the `shiftwise-ai` namespace was not created or the images were not published), or the pod's service account in `openshift-marketplace` lacks the `system:image-puller` role on the `shiftwise-ai` namespace.
+- **`CatalogSource` in `TRANSIENT_FAILURE`**: a direct consequence of the catalog pod failing to start; fix the image pull issue above and restart the pod (`oc delete pod -n openshift-marketplace -l olm.catalogSource=shiftwise-operator-catalog`).
+- **Empty `PackageManifest`** (`oc get packagemanifest -n openshift-marketplace | grep shiftwise`): wait a few seconds after the `CatalogSource` becomes `READY` — OLM sync is not instantaneous.
 
-Os prints acima devem ficar em `docs/images/` com os nomes indicados em cada seção.
+The screenshots above should live in `docs/images/` under the names referenced in each section.

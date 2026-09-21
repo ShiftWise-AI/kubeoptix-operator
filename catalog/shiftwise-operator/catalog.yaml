@@ -9,17 +9,17 @@ schema: olm.channel
 package: shiftwise-operator
 name: stable
 entries:
-- name: shiftwise-operator.v1.0.0
+- name: shiftwise-operator.v1.0.1
 ---
 schema: olm.bundle
 package: shiftwise-operator
-name: shiftwise-operator.v1.0.0
-image: default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator-bundle:v1.0.0
+name: shiftwise-operator.v1.0.1
+image: quay.io/parraes/shiftwise-operator-bundle:v1.0.1
 properties:
 - type: olm.package
   value:
     packageName: shiftwise-operator
-    version: 1.0.0
+    version: 1.0.1
 - type: olm.gvk
   value:
     group: shiftwise.ai
@@ -31,7 +31,7 @@ properties:
       alm-examples: "[\n  {\n    \"apiVersion\": \"shiftwise.ai/v1alpha1\",\n    \"kind\": \"ShiftWise\",\n    \"metadata\": {\n      \"name\": \"shiftwise\",\n      \"namespace\": \"shiftwise-ai\"\n    },\n    \"spec\": {\n      \"storage\": {\n        \"name\": \"harvester-app-data\",\n        \"size\": \"10Gi\",\n        \"accessModes\": [\n          \"ReadWriteOnce\"\n        ]\n      }\n    }\n  }\n]"
       capabilities: Basic Install
       categories: AI/Machine Learning,OpenShift Optional
-      containerImage: default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:1.0.0
+      containerImage: quay.io/parraes/shiftwise-operator:1.0.1
       createdAt: '2026-08-31T00:00:00Z'
       description: ShiftWise operator that reconciles the KubeOptix platform on OpenShift.
       operators.operatorframework.io/suggested-namespace: shiftwise-ai
@@ -73,4 +73,4 @@ properties:
     maturity: alpha
     provider:
       name: ShiftWise AI
-    version: 1.0.0
+    version: 1.0.1

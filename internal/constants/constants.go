@@ -7,11 +7,11 @@ const (
 	ManagedBy        = "shiftwise-operator"
 	Finalizer        = "shiftwise.ai/cleanup"
 
-	ImageRegistry         = "default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai"
-	ConfigurationsRegistry = "default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai"
-	ImageTag              = "1.0.0"
-	PullAlways            = "Always"
-	PullIfNotPresent      = "IfNotPresent"
+	ImageRegistry          = "quay.io/parraes"
+	ConfigurationsRegistry = "quay.io/parraes"
+	ImageTag               = "1.0.0"
+	PullAlways             = "Always"
+	PullIfNotPresent       = "IfNotPresent"
 
 	HarvesterName      = "kubeoptix-harvester"
 	AnalyzerName       = "kubeoptix-analyzer"
@@ -39,6 +39,13 @@ const (
 	PostgresSecretName  = "kubeoptix-db"
 	DashboardConfigMap  = "kubeoptix-dashboard-env"
 	DashboardContainer  = "dashboard"
+
+	DashboardServiceAccount = "kubeoptix-dashboard"
+	DashboardOAuthSecret    = "kubeoptix-dashboard-oauth"
+	DashboardTLSSecret      = "kubeoptix-dashboard-tls"
+	DashboardOAuthContainer = "oauth-proxy"
+	OAuthProxyImage         = "image-registry.openshift-image-registry.svc:5000/openshift/oauth-proxy:v4.4"
+	AuthDelegatorRole       = "system:auth-delegator"
 
 	DefaultStorageSize  = "10Gi"
 	PostgresStorageSize = "20Gi"

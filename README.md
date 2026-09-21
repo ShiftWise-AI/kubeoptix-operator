@@ -8,18 +8,24 @@ Components (Harvester, Analyzer, Core AI, Configurations, Reporter, Dashboard, a
 
 ## 1. Catalog on the cluster
 
-With `oc` authenticated as an administrator (cluster-admin), run the installation script — it creates the `shiftwise-ai` namespace, builds and publishes the operator/bundle/catalog images to the internal registry, grants the required RBAC permissions, and applies the `CatalogSource`:
+The operator, bundle, and catalog images are already built and published on `quay.io/parraes` (public, no authentication required). With `oc` authenticated as an administrator (cluster-admin), just apply the `CatalogSource` pointing at those images:
 
 ```bash
 ./hack/install-catalog.sh
 ```
 
-> **Important:** simply running `oc apply -f config/olm/catalogsource.yaml` is **not enough**. The `CatalogSource` references an image in the internal registry (`shiftwise-ai/shiftwise-operator-catalog`) that must exist and be built/pushed beforehand, and the catalog pod (which runs in `openshift-marketplace`) needs explicit permission (`system:image-puller`) to pull images from the `shiftwise-ai` namespace. Without this the pod stays in `ImagePullBackOff` with an `authentication required` error and the operator never shows up in OperatorHub. `hack/install-catalog.sh` takes care of all of this automatically.
+This is equivalent to `oc apply -f config/olm/catalogsource.yaml`, plus waiting for the catalog pod to become **READY** and for the package to show up in `PackageManifest`. No image build, no internal registry, and no extra RBAC are needed — OLM (in `openshift-marketplace`) and the operator Deployment (in `openshift-operators`) pull the images directly from quay.io.
 
-If the images have already been published before and you only want to re-apply the `CatalogSource`/RBAC (without rebuilding):
+To install a specific version:
 
 ```bash
-./hack/install-catalog.sh --skip-build
+./hack/install-catalog.sh --version 1.0.0
+```
+
+Maintainers who need to publish a new version to quay.io (requires `podman login quay.io` with push access to the `parraes` org) can build and push before applying the `CatalogSource`:
+
+```bash
+./hack/install-catalog.sh --build --version 1.0.0
 ```
 
 At the end, the script confirms that the `CatalogSource` is **READY** and that the package shows up in the `PackageManifest`:
@@ -112,8 +118,9 @@ oc describe pod -n openshift-marketplace -l olm.catalogSource=shiftwise-operator
 
 Most common causes (all resolved by `./hack/install-catalog.sh`):
 
-- **`ImagePullBackOff` / `authentication required`**: the catalog image does not exist in the internal registry (the `shiftwise-ai` namespace was not created or the images were not published), or the pod's service account in `openshift-marketplace` lacks the `system:image-puller` role on the `shiftwise-ai` namespace.
-- **`CatalogSource` in `TRANSIENT_FAILURE`**: a direct consequence of the catalog pod failing to start; fix the image pull issue above and restart the pod (`oc delete pod -n openshift-marketplace -l olm.catalogSource=shiftwise-operator-catalog`).
+- **`ImagePullBackOff` / `authentication required`**: the `CatalogSource` (or the CSV it produced) is pointing at an image tag that does not exist on `quay.io/parraes`, or at a stale internal-registry reference from a previous local build. Re-run `./hack/install-catalog.sh --version <version>` with a version that is actually published on quay.io.
+- **`CatalogSource` in `TRANSIENT_FAILURE`**: a direct consequence of the catalog pod failing to start; fix the image reference above and restart the pod (`oc delete pod -n openshift-marketplace -l olm.catalogSource=shiftwise-operator-catalog`).
+- **Subscription stuck in `BundleUnpacking`**: OLM could not pull the bundle image referenced by the catalog; confirm the tag exists on `quay.io/parraes/shiftwise-operator-bundle`.
 - **Empty `PackageManifest`** (`oc get packagemanifest -n openshift-marketplace | grep shiftwise`): wait a few seconds after the `CatalogSource` becomes `READY` — OLM sync is not instantaneous.
 
 The screenshots above should live in `docs/images/` under the names referenced in each section.

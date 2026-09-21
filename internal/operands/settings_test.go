@@ -20,7 +20,7 @@ func TestFromCRDefaults(t *testing.T) {
 	if s.PostgresSecret != "kubeoptix-db" {
 		t.Fatalf("postgres secret = %q", s.PostgresSecret)
 	}
-	wantImage := "default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/kubeoptix-harvester:1.0.0"
+	wantImage := "quay.io/parraes/kubeoptix-harvester:1.0.0"
 	if s.HarvesterImage != wantImage {
 		t.Fatalf("harvester image = %q, want %q", s.HarvesterImage, wantImage)
 	}

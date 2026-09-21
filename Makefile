@@ -1,6 +1,6 @@
 # Image URL to use all building/pushing image targets
-IMG ?= default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:1.0.0
-VERSION ?= 1.0.0
+IMG ?= quay.io/parraes/shiftwise-operator:1.0.1
+VERSION ?= 1.0.1
 NAMESPACE ?= shiftwise-ai
 
 CONTAINER_TOOL ?= podman
@@ -81,8 +81,8 @@ image-push: ## Push operator image.
 embed-icon: ## Encode config/manifests/logo.png into the ClusterServiceVersion.
 	bash "$(CURDIR)/hack/embed-operator-icon.sh"
 
-BUNDLE_IMG ?= default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator-bundle:v$(VERSION)
-CATALOG_IMG ?= default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator-catalog:v$(VERSION)
+BUNDLE_IMG ?= quay.io/parraes/shiftwise-operator-bundle:v$(VERSION)
+CATALOG_IMG ?= quay.io/parraes/shiftwise-operator-catalog:v$(VERSION)
 
 .PHONY: bundle
 bundle: ## Generate OLM bundle manifests from the current VERSION.

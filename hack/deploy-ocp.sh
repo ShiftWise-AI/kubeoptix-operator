@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./hack/deploy-ocp.sh
-#   ./hack/deploy-ocp.sh --image default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:0.2.1
+#   ./hack/deploy-ocp.sh --image quay.io/parraes/shiftwise-operator:0.2.1
 #   ./hack/deploy-ocp.sh --build --push --internal-registry
 #   ./hack/deploy-ocp.sh --with-instance
 #   ./hack/deploy-ocp.sh --undeploy
@@ -13,7 +13,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-DEFAULT_IMG="default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:1.0.0"
+DEFAULT_IMG="quay.io/parraes/shiftwise-operator:1.0.1"
 DEFAULT_NAMESPACE="shiftwise-ai"
 DEFAULT_TIMEOUT="180s"
 DEPLOYMENT="shiftwise-operator-controller-manager"
@@ -22,7 +22,7 @@ CONTAINERFILE="${CONTAINERFILE:-Containerfile}"
 
 IMG="${IMG:-${DEFAULT_IMG}}"
 NAMESPACE="${NAMESPACE:-${DEFAULT_NAMESPACE}}"
-VERSION="${VERSION:-1.0.0}"
+VERSION="${VERSION:-1.0.1}"
 CONTAINER_TOOL="${CONTAINER_TOOL:-podman}"
 TIMEOUT="${TIMEOUT:-${DEFAULT_TIMEOUT}}"
 

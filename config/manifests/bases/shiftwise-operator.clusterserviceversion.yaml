@@ -1,13 +1,13 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: shiftwise-operator.v1.0.0
+  name: shiftwise-operator.v1.0.1
   namespace: placeholder
   annotations:
     alm-examples: "[\n  {\n    \"apiVersion\": \"shiftwise.ai/v1alpha1\",\n    \"kind\": \"ShiftWise\",\n    \"metadata\": {\n      \"name\": \"shiftwise\",\n      \"namespace\": \"shiftwise-ai\"\n    },\n    \"spec\": {\n      \"storage\": {\n        \"name\": \"harvester-app-data\",\n        \"size\": \"10Gi\",\n        \"accessModes\": [\n          \"ReadWriteOnce\"\n        ]\n      }\n    }\n  }\n]"
     capabilities: Basic Install
     categories: AI/Machine Learning,OpenShift Optional
-    containerImage: default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:1.0.0
+    containerImage: quay.io/parraes/shiftwise-operator:1.0.1
     createdAt: '2026-08-31T00:00:00Z'
     description: ShiftWise operator that reconciles the KubeOptix platform on OpenShift.
     operators.operatorframework.io/suggested-namespace: shiftwise-ai
@@ -28,7 +28,7 @@ spec:
     name: ShiftWise AI
   maturity: alpha
   minKubeVersion: 1.26.0
-  version: 1.0.0
+  version: 1.0.1
   links:
   - name: ShiftWise Operator
     url: https://github.com/ShiftWise-AI/kubeoptix-operator
@@ -53,7 +53,7 @@ spec:
       description: "Inst\xE2ncia da plataforma KubeOptix gerenciada pelo ShiftWise Operator."
   relatedImages:
   - name: manager
-    image: default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:1.0.0
+    image: quay.io/parraes/shiftwise-operator:1.0.1
   install:
     strategy: deployment
     spec:
@@ -127,6 +127,26 @@ spec:
           - cluster-reader
           verbs:
           - bind
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterroles
+          resourceNames:
+          - system:auth-delegator
+          verbs:
+          - bind
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
         - apiGroups:
           - policy
           resources:
@@ -260,7 +280,7 @@ spec:
                   type: RuntimeDefault
               containers:
               - name: manager
-                image: default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:1.0.0
+                image: quay.io/parraes/shiftwise-operator:1.0.1
                 imagePullPolicy: Always
                 args:
                 - --metrics-bind-address=:8080

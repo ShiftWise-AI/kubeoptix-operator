@@ -13,10 +13,14 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = os.environ.get("VERSION", "1.0.0")
+QUAY_ORG = os.environ.get("QUAY_ORG", "parraes")
 PACKAGE = "shiftwise-operator"
 CSV_NAME = f"{PACKAGE}.v{VERSION}"
-OPERATOR_IMG = f"default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator:{VERSION}"
-BUNDLE_IMG = f"default-route-openshift-image-registry.apps-crc.testing/shiftwise-ai/shiftwise-operator-bundle:v{VERSION}"
+# OPERATOR_IMG/BUNDLE_IMG can be overridden with full image references (e.g.
+# by hack/install-catalog.sh --build); otherwise they default to the public
+# quay.io images already published for the current VERSION.
+OPERATOR_IMG = os.environ.get("OPERATOR_IMG", f"quay.io/{QUAY_ORG}/shiftwise-operator:{VERSION}")
+BUNDLE_IMG = os.environ.get("BUNDLE_IMG", f"quay.io/{QUAY_ORG}/shiftwise-operator-bundle:v{VERSION}")
 SA = "shiftwise-operator-controller-manager"
 
 
@@ -44,6 +48,12 @@ def deployment_spec() -> dict:
     dep = load_yaml(ROOT / "config/manager/manager.yaml")
     spec = deepcopy(dep["spec"])
     spec.pop("paused", None)
+    # config/manager/manager.yaml pins a static image reference used for
+    # `oc apply -k config/default`-style deploys; the CSV must always ship
+    # the image actually built/published for this VERSION (OPERATOR_IMG).
+    for container in spec["template"]["spec"]["containers"]:
+        if container.get("name") == "manager":
+            container["image"] = OPERATOR_IMG
     return spec
 
 

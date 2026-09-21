@@ -108,6 +108,7 @@ func ClusterScopedFor(s Settings) []client.Object {
 		objs = append(objs,
 			&admissionv1.ValidatingAdmissionPolicy{ObjectMeta: metav1.ObjectMeta{Name: constants.DashboardName + "-single-replica"}},
 			&admissionv1.ValidatingAdmissionPolicyBinding{ObjectMeta: metav1.ObjectMeta{Name: constants.DashboardName + "-single-replica"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: constants.DashboardName + "-auth-delegator"}},
 		)
 	}
 	return objs

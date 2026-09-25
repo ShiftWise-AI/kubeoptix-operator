@@ -63,6 +63,8 @@ spec:
                     name:
                       type: string
                     size:
+                      description: Size is a positive Kubernetes quantity (for example, 20Gi). Omit or leave empty to use the default.
+                      pattern: '^(\+?([0-9]*[1-9][0-9]*(\.[0-9]*)?|[0-9]*\.[0-9]*[1-9][0-9]*)([eE][+-]?[0-9]+|[numkMGTPE]|[KMGTPE]i)?)?$'
                       type: string
                     storageClassName:
                       type: string

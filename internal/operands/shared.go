@@ -2,6 +2,7 @@ package operands
 
 import (
 	"context"
+	"fmt"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,13 +42,20 @@ func reconcileSharedPVC(ctx context.Context, c client.Client, scheme *runtime.Sc
 	if err == nil || !apierrors.IsNotFound(err) {
 		return err
 	}
+	size, err := resource.ParseQuantity(s.StorageSize)
+	if err != nil {
+		return fmt.Errorf("invalid spec.storage.size %q: %w", s.StorageSize, err)
+	}
+	if size.Sign() <= 0 {
+		return fmt.Errorf("invalid spec.storage.size %q: must be greater than zero", s.StorageSize)
+	}
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: objectMeta(s.ClaimName, s.Namespace, labels("data", s.Instance)),
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: accessModes(s.AccessModes),
 			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse(s.StorageSize),
+					corev1.ResourceStorage: size,
 				},
 			},
 		},

@@ -15,8 +15,10 @@ type ShiftWiseSpec struct {
 
 // StorageSpec configures the shared data volume.
 type StorageSpec struct {
-	ExistingClaim    string   `json:"existingClaim,omitempty"`
-	Name             string   `json:"name,omitempty"`
+	ExistingClaim string `json:"existingClaim,omitempty"`
+	Name          string `json:"name,omitempty"`
+	// Size is a positive Kubernetes quantity (for example, 20Gi). Omit or leave empty to use the default.
+	// +kubebuilder:validation:Pattern=`^(\+?([0-9]*[1-9][0-9]*(\.[0-9]*)?|[0-9]*\.[0-9]*[1-9][0-9]*)([eE][+-]?[0-9]+|[numkMGTPE]|[KMGTPE]i)?)?$`
 	Size             string   `json:"size,omitempty"`
 	StorageClassName string   `json:"storageClassName,omitempty"`
 	AccessModes      []string `json:"accessModes,omitempty"`

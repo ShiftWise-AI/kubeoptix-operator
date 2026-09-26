@@ -2,6 +2,7 @@ package operands
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,7 +28,7 @@ func ReconcileDashboard(ctx context.Context, c client.Client, scheme *runtime.Sc
 	if err := reconcileDashboardAuthDelegator(ctx, c, scheme, name+"-auth-delegator", s, ls); err != nil {
 		return err
 	}
-	if err := applyIfMissing(ctx, c, scheme, owner, dashboardOAuthSecret(s, ls)); err != nil {
+	if err := reconcileGeneratedSecret(ctx, c, scheme, owner, dashboardOAuthSecret(s, ls), "session_secret", rand.Reader); err != nil {
 		return err
 	}
 	svc := &corev1.Service{
@@ -105,20 +106,12 @@ func reconcileDashboardAuthDelegator(ctx context.Context, c client.Client, schem
 	return apply(ctx, c, scheme, nil, crb)
 }
 
-// dashboardOAuthSecret holds the oauth-proxy cookie secret used to sign session cookies.
-// It is created once (applyIfMissing) so existing sessions are not invalidated on every
-// reconcile.
+// dashboardOAuthSecret is the template for the oauth-proxy session secret.
+// reconcileGeneratedSecret fills the credential only when the Secret is missing.
 func dashboardOAuthSecret(s Settings, ls map[string]string) *corev1.Secret {
-	cookieSecret, err := randomAlphanum(24)
-	if err != nil {
-		cookieSecret = fmt.Sprintf("kubeoptix-oauth-%s!", s.Instance)[:24]
-	}
 	return &corev1.Secret{
 		ObjectMeta: objectMeta(constants.DashboardOAuthSecret, s.Namespace, ls),
 		Type:       corev1.SecretTypeOpaque,
-		StringData: map[string]string{
-			"session_secret": cookieSecret,
-		},
 	}
 }
 

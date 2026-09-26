@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -97,7 +98,8 @@ func (r *ShiftWiseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		recErr = operands.ReconcileDashboard(ctx, r.Client, r.Scheme, instance, settings)
 	}
 
-	ready, desired, _ := operands.ReadyCount(ctx, r.Client, settings)
+	ready, desired, readyErr := operands.ReadyCount(ctx, r.Client, settings)
+	recErr = errors.Join(recErr, readyErr)
 	phase := operands.Phase(ready, desired, recErr)
 	message := "reconciled KubeOptix inventory"
 	if recErr != nil {
@@ -109,8 +111,8 @@ func (r *ShiftWiseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err := r.patchStatus(ctx, instance, phase, operands.ReadyString(ready, desired), message); err != nil {
 		return ctrl.Result{}, err
 	}
-	if recErr != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, nil
+	if readyErr != nil {
+		return ctrl.Result{}, recErr
 	}
 	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }

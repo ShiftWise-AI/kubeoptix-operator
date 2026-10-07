@@ -4,10 +4,12 @@
 ARG GO_TOOLSET_IMAGE=registry.access.redhat.com/ubi9/go-toolset:1.24
 ARG RUNTIME_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:latest
 ARG VERSION=1.0.0
+ARG COMPONENT_IMAGE_TAG=1.0.0
 
 FROM ${GO_TOOLSET_IMAGE} AS builder
 
 ARG VERSION
+ARG COMPONENT_IMAGE_TAG
 ENV CGO_ENABLED=0 \
     GOOS=linux \
     GOFLAGS="-mod=mod"
@@ -21,7 +23,7 @@ COPY --chown=1001:0 api/ api/
 COPY --chown=1001:0 cmd/ cmd/
 COPY --chown=1001:0 internal/ internal/
 
-RUN go build -a -ldflags "-s -w -X github.com/ShiftWise-AI/kubeoptix-operator/internal/version.Version=${VERSION}" \
+RUN go build -a -ldflags "-s -w -X github.com/ShiftWise-AI/kubeoptix-operator/internal/version.Version=${VERSION} -X github.com/ShiftWise-AI/kubeoptix-operator/internal/constants.ImageTag=${COMPONENT_IMAGE_TAG}" \
     -o /opt/app-root/src/manager cmd/main.go
 
 FROM ${RUNTIME_IMAGE}

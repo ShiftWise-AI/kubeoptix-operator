@@ -1,0 +1,183 @@
+name: Publish operator images to Quay
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'feature/**'
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quay-${{ github.repository }}-${{ github.event_name == 'push' && 'release' || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: [self-hosted, linux, fedora]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a release tag in vMAJOR.MINOR.PATCH format." >&2
+            exit 1
+          fi
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "Release tags must point to a commit on main." >&2
+            exit 1
+          }
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run Go tests
+        run: go test ./...
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Operator image without publishing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Containerfile
+          push: false
+          build-args: |
+            VERSION=0.0.0
+            COMPONENT_IMAGE_TAG=1.0.0
+          tags: quay.io/parraes/shiftwise-operator:ci-${{ github.sha }}
+
+  publish:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: [self-hosted, linux, fedora]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install bundle generator dependency
+        run: python -m pip install PyYAML
+
+      - name: Resolve release versions
+        id: release
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a release tag in vMAJOR.MINOR.PATCH format." >&2
+            exit 1
+          fi
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "Release tags must point to a commit on main." >&2
+            exit 1
+          }
+          latest_tag="$(git tag --merged origin/main --list 'v*.*.*' | sort -V | tail -n 1)"
+          if [[ "$latest_tag" != "$GITHUB_REF_NAME" ]]; then
+            echo "Refusing to publish an older release after $latest_tag." >&2
+            exit 1
+          fi
+          version="${GITHUB_REF_NAME#v}"
+          previous_tag=""
+          while IFS= read -r tag; do
+            [[ "$tag" == "$GITHUB_REF_NAME" ]] && break
+            previous_tag="$tag"
+          done < <(git tag --merged origin/main --list 'v*.*.*' | sort -V)
+          previous_version="${previous_tag#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "previous_version=$previous_version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Load published catalog history
+        env:
+          PREVIOUS_VERSION: ${{ steps.release.outputs.previous_version }}
+        run: |
+          catalog_image=quay.io/parraes/shiftwise-operator-catalog:stable
+          if ! docker pull "$catalog_image"; then
+            if [[ -z "$PREVIOUS_VERSION" ]]; then
+              echo "No previous catalog image; keeping the checked-in initial catalog."
+              exit 0
+            fi
+            catalog_image="quay.io/parraes/shiftwise-operator-catalog:v${PREVIOUS_VERSION}"
+            docker pull "$catalog_image"
+          fi
+          container_id="$(docker create "$catalog_image")"
+          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+          mkdir -p catalog/shiftwise-operator
+          docker cp "${container_id}:/configs/shiftwise-operator/catalog.yaml" \
+            catalog/shiftwise-operator/catalog.yaml
+          docker rm "$container_id" >/dev/null
+          trap - EXIT
+
+      - name: Generate OLM bundle and catalog
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          PREVIOUS_VERSION: ${{ steps.release.outputs.previous_version }}
+          OPERATOR_IMG: quay.io/parraes/shiftwise-operator:${{ steps.release.outputs.version }}
+          BUNDLE_IMG: quay.io/parraes/shiftwise-operator-bundle:v${{ steps.release.outputs.version }}
+        run: python hack/generate-olm.py
+
+      - name: Log in to Quay
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Build and publish Operator image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Containerfile
+          push: true
+          build-args: |
+            VERSION=${{ steps.release.outputs.version }}
+            COMPONENT_IMAGE_TAG=${{ steps.release.outputs.version }}
+          tags: |
+            quay.io/parraes/shiftwise-operator:${{ steps.release.outputs.version }}
+            quay.io/parraes/shiftwise-operator:sha-${{ github.sha }}
+
+      - name: Build and publish OLM bundle image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./bundle.Dockerfile
+          push: true
+          tags: |
+            quay.io/parraes/shiftwise-operator-bundle:v${{ steps.release.outputs.version }}
+            quay.io/parraes/shiftwise-operator-bundle:sha-${{ github.sha }}
+
+      - name: Build and publish OLM catalog image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./catalog.Dockerfile
+          push: true
+          tags: |
+            quay.io/parraes/shiftwise-operator-catalog:v${{ steps.release.outputs.version }}
+            quay.io/parraes/shiftwise-operator-catalog:stable

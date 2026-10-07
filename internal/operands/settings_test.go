@@ -1,6 +1,7 @@
 package operands
 
 import (
+	"crypto/rand"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,11 +63,11 @@ func TestPhase(t *testing.T) {
 
 func TestRandomAlphanum(t *testing.T) {
 	t.Parallel()
-	a, err := randomAlphanum(24)
+	a, err := randomAlphanum(24, rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := randomAlphanum(24)
+	b, err := randomAlphanum(24, rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}

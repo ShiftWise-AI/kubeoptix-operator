@@ -101,29 +101,46 @@ jobs:
             exit 1
           fi
           version="${GITHUB_REF_NAME#v}"
-          previous_tag=""
-          while IFS= read -r tag; do
-            [[ "$tag" == "$GITHUB_REF_NAME" ]] && break
-            previous_tag="$tag"
-          done < <(git tag --merged origin/main --list 'v*.*.*' | sort -V)
-          previous_version="${previous_tag#v}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "previous_version=$previous_version" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Load published catalog history
-        env:
-          PREVIOUS_VERSION: ${{ steps.release.outputs.previous_version }}
+        id: catalog
         run: |
+          catalog_version() {
+            python - "$1" <<'PY'
+          import sys
+          import yaml
+
+          package = "shiftwise-operator"
+          for document in yaml.safe_load_all(open(sys.argv[1])):
+              if (
+                  document
+                  and document.get("schema") == "olm.channel"
+                  and document.get("package") == package
+                  and document.get("name") == "stable"
+              ):
+                  entries = document.get("entries", [])
+                  if entries:
+                      name = entries[-1]["name"]
+                      prefix = f"{package}.v"
+                      if name.startswith(prefix):
+                          print(name[len(prefix):])
+                  break
+          PY
+          }
+
+          fallback_version="$(catalog_version catalog/shiftwise-operator/catalog.yaml)"
           catalog_image=quay.io/parraes/shiftwise-operator-catalog:stable
           if ! docker pull "$catalog_image"; then
-            if [[ -z "$PREVIOUS_VERSION" ]]; then
+            if [[ -z "$fallback_version" ]]; then
               echo "No previous catalog image; keeping the checked-in initial catalog."
+              echo "previous_version=" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            catalog_image="quay.io/parraes/shiftwise-operator-catalog:v${PREVIOUS_VERSION}"
+            catalog_image="quay.io/parraes/shiftwise-operator-catalog:v${fallback_version}"
             docker pull "$catalog_image"
           fi
           container_id="$(docker create "$catalog_image")"
@@ -133,11 +150,13 @@ jobs:
             catalog/shiftwise-operator/catalog.yaml
           docker rm "$container_id" >/dev/null
           trap - EXIT
+          previous_version="$(catalog_version catalog/shiftwise-operator/catalog.yaml)"
+          echo "previous_version=${previous_version}" >> "$GITHUB_OUTPUT"
 
       - name: Generate OLM bundle and catalog
         env:
           VERSION: ${{ steps.release.outputs.version }}
-          PREVIOUS_VERSION: ${{ steps.release.outputs.previous_version }}
+          PREVIOUS_VERSION: ${{ steps.catalog.outputs.previous_version }}
           OPERATOR_IMG: quay.io/parraes/shiftwise-operator:${{ steps.release.outputs.version }}
           BUNDLE_IMG: quay.io/parraes/shiftwise-operator-bundle:v${{ steps.release.outputs.version }}
         run: python hack/generate-olm.py

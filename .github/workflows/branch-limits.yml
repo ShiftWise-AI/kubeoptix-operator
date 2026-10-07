@@ -1,0 +1,36 @@
+name: Validate Branch Flow
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+jobs:
+  check-flow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR Source and Target
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          echo "Merge attempt: from '$HEAD_REF' to '$BASE_REF'"
+
+          if [[ "$BASE_REF" == "stage" && "$HEAD_REF" != "develop" ]]; then
+            echo "::error::The 'stage' branch only accepts pull requests from 'develop'."
+            exit 1
+          fi
+
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "stage" && ! "$HEAD_REF" =~ ^hotfix/.+ ]]; then
+            echo "::error::The 'main' branch only accepts pull requests from 'stage' or 'hotfix/*'."
+            exit 1
+          fi
+
+          if [[ "$HEAD_REF" =~ ^feature/.+ && "$BASE_REF" != "develop" ]]; then
+            echo "::error::'feature/*' branches can only target 'develop'."
+            exit 1
+          fi
+
+          if [[ "$HEAD_REF" =~ ^hotfix/.+ && "$BASE_REF" != "main" && "$BASE_REF" != "develop" ]]; then
+            echo "::error::'hotfix/*' branches can only target 'main' or 'develop'; promote to 'stage' through 'develop'."
+            exit 1
+          fi

@@ -1,5 +1,7 @@
 # ShiftWise Operator
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the branch workflow and contribution process.
+
 OpenShift operator for the **KubeOptix** platform. Install it from OperatorHub, create a `ShiftWise` instance, and the Dashboard becomes available through a Route.
 
 Components (Harvester, Analyzer, Core AI, Configurations, Reporter, Dashboard, and PostgreSQL) come up in the `shiftwise-ai` project. Only the Dashboard has a public route. Images come from Quay; database credentials are generated automatically.

@@ -4,7 +4,6 @@ on:
   pull_request:
   push:
     branches:
-      - 'feature/**'
       - main
     tags:
       - 'v*.*.*'
@@ -14,7 +13,7 @@ permissions:
 
 concurrency:
   group: quay-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   test:

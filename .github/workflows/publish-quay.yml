@@ -110,11 +110,13 @@ jobs:
         id: catalog
         run: |
           catalog_version() {
-            python - "$1" <<'PY'
+            python - "$1" "$2" <<'PY'
           import sys
           import yaml
 
           package = "shiftwise-operator"
+          target = tuple(int(part) for part in sys.argv[2].split("."))
+          prefix = f"{package}.v"
           for document in yaml.safe_load_all(open(sys.argv[1])):
               if (
                   document
@@ -124,20 +126,20 @@ jobs:
               ):
                   entries = document.get("entries", [])
                   if entries:
-                      if entries:
-                          replaced = {entry.get("replaces") for entry in entries}
-                          heads = [entry for entry in entries if entry.get("name") not in replaced]
-                          if len(heads) != 1:
-                              raise SystemExit("stable channel must have exactly one head bundle")
-                          name = heads[0]["name"]
-                      prefix = f"{package}.v"
-                      if name.startswith(prefix):
-                          print(name[len(prefix):])
+                    previous = [
+                      entry["name"][len(prefix):]
+                      for entry in entries
+                      if entry.get("name", "").startswith(prefix)
+                      and tuple(int(part) for part in entry["name"][len(prefix):].split(".")) < target
+                    ]
+                    if previous:
+                      print(max(previous, key=lambda value: tuple(int(part) for part in value.split("."))))
                   break
           PY
           }
 
-          fallback_version="$(catalog_version catalog/shiftwise-operator/catalog.yaml)"
+          release_version="${GITHUB_REF_NAME#v}"
+          fallback_version="$(catalog_version catalog/shiftwise-operator/catalog.yaml "$release_version")"
           catalog_image=quay.io/parraes/shiftwise-operator-catalog:stable
           if ! docker pull "$catalog_image"; then
             if [[ -z "$fallback_version" ]]; then
@@ -155,7 +157,7 @@ jobs:
             catalog/shiftwise-operator/catalog.yaml
           docker rm "$container_id" >/dev/null
           trap - EXIT
-          previous_version="$(catalog_version catalog/shiftwise-operator/catalog.yaml)"
+          previous_version="$(catalog_version catalog/shiftwise-operator/catalog.yaml "$release_version")"
           echo "previous_version=${previous_version}" >> "$GITHUB_OUTPUT"
 
       - name: Generate OLM bundle and catalog

@@ -48,6 +48,7 @@ func coreAISTS(s Settings, ls map[string]string) *appsv1.StatefulSet {
 							envVar("LOG_LEVEL", "INFO"),
 							envVar("PORT", "8000"),
 							envVar("GRACEFUL_SHUTDOWN_TIMEOUT", "30"),
+							envVar("SYSTEM_SETTINGS_URL", "http://"+constants.ConfigurationsAPIService+":8000/system-settings"),
 							envVar("MARK_DOWN_FILE", "/app/data/report.md"),
 							envVar("KUBEOPTIX_METADATA_DIR", "/app/data/assessment"),
 							envVar("KUBEOPTIX_OUTPUT_DIR", "/app/data/reports"),

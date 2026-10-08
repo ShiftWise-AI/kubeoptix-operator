@@ -124,7 +124,12 @@ jobs:
               ):
                   entries = document.get("entries", [])
                   if entries:
-                      name = entries[-1]["name"]
+                      if entries:
+                          replaced = {entry.get("replaces") for entry in entries}
+                          heads = [entry for entry in entries if entry.get("name") not in replaced]
+                          if len(heads) != 1:
+                              raise SystemExit("stable channel must have exactly one head bundle")
+                          name = heads[0]["name"]
                       prefix = f"{package}.v"
                       if name.startswith(prefix):
                           print(name[len(prefix):])

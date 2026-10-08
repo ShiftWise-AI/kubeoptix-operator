@@ -28,6 +28,7 @@ CONTAINER_TOOL="${CONTAINER_TOOL:-podman}"
 CONTAINERFILE="${CONTAINERFILE:-Containerfile}"
 DEFAULT_TIMEOUT="180s"
 TIMEOUT="${TIMEOUT:-${DEFAULT_TIMEOUT}}"
+VERSION_EXPLICIT=false
 
 DO_BUILD=false
 CATALOG_IMG_OVERRIDE=""
@@ -56,6 +57,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --version)
       VERSION="${2:?--version requires a value}"
+      VERSION_EXPLICIT=true
       shift 2
       ;;
     --catalog-image)
@@ -80,6 +82,14 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "${CATALOG_IMG_OVERRIDE}" ]]; then
+  CATALOG_IMG="${CATALOG_IMG_OVERRIDE}"
+elif [[ "${VERSION_EXPLICIT}" == true || "${DO_BUILD}" == true ]]; then
+  CATALOG_IMG="quay.io/${QUAY_ORG}/shiftwise-operator-catalog:v${VERSION}"
+else
+  CATALOG_IMG="quay.io/${QUAY_ORG}/shiftwise-operator-catalog:stable"
+fi
 
 log()  { printf '==> %s\n' "$*"; }
 die()  { printf 'error: %s\n' "$*" >&2; exit 1; }

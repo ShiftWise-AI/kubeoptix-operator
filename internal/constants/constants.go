@@ -9,7 +9,6 @@ const (
 
 	ImageRegistry          = "quay.io/parraes"
 	ConfigurationsRegistry = "quay.io/parraes"
-	ImageTag               = "1.0.0"
 	PullAlways             = "Always"
 	PullIfNotPresent       = "IfNotPresent"
 
@@ -56,3 +55,5 @@ const (
 
 	ReconcileInterval = 30
 )
+
+var ImageTag = "1.0.0"

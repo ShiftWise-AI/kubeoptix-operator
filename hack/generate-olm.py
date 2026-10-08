@@ -41,6 +41,13 @@ def icon() -> dict:
     return {"mediatype": "image/png", "base64data": base64.b64encode(png).decode("ascii")}
 
 
+def version_tuple(version: str) -> tuple[int, int, int]:
+    parts = tuple(int(part) for part in version.split("."))
+    if len(parts) != 3:
+        raise ValueError(f"invalid semantic version: {version}")
+    return parts
+
+
 def sample() -> dict:
     return load_yaml(ROOT / "config/samples/shiftwise.ai_v1alpha1_shiftwise.yaml")
 
@@ -82,13 +89,15 @@ def previous_version() -> str:
         ):
             entries = document.get("entries", [])
             if entries:
-                replaced = {entry.get("replaces") for entry in entries}
-                heads = [entry for entry in entries if entry.get("name") not in replaced]
-                if len(heads) != 1:
-                    raise ValueError("stable channel must have exactly one head bundle")
                 prefix = f"{PACKAGE}.v"
-                name = heads[0]["name"]
-                return name.removeprefix(prefix)
+                previous = [
+                    entry["name"][len(prefix):]
+                    for entry in entries
+                    if entry.get("name", "").startswith(prefix)
+                    and version_tuple(entry["name"][len(prefix):]) < version_tuple(VERSION)
+                ]
+                if previous:
+                    return max(previous, key=version_tuple)
     return ""
 
 
@@ -196,6 +205,15 @@ def catalog(csv_obj: dict) -> list:
     current_entry = {"name": CSV_NAME}
     if previous:
         current_entry["replaces"] = f"{PACKAGE}.v{previous}"
+    channel_entries = sorted(
+        [*previous_entries, current_entry],
+        key=lambda entry: version_tuple(entry["name"].removeprefix(f"{PACKAGE}.v")),
+        reverse=True,
+    )
+    for index, entry in enumerate(channel_entries):
+        entry.pop("replaces", None)
+        if index + 1 < len(channel_entries):
+            entry["replaces"] = channel_entries[index + 1]["name"]
 
     current_bundle = {
         "schema": "olm.bundle",
@@ -248,7 +266,7 @@ def catalog(csv_obj: dict) -> list:
             "schema": "olm.channel",
             "package": PACKAGE,
             "name": "stable",
-            "entries": [current_entry, *previous_entries],
+            "entries": channel_entries,
         },
         *previous_bundles,
         current_bundle,

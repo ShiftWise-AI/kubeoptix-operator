@@ -1,6 +1,7 @@
 # Image URL to use all building/pushing image targets
 IMG ?= quay.io/parraes/shiftwise-operator:1.0.1
 VERSION ?= 1.0.1
+COMPONENT_IMAGE_TAG ?= 1.0.0
 NAMESPACE ?= shiftwise-ai
 
 CONTAINER_TOOL ?= podman
@@ -71,7 +72,7 @@ run: fmt vet ## Run a controller from your host.
 
 .PHONY: image-build
 image-build: ## Build operator image with Podman using UBI.
-	$(CONTAINER_TOOL) build -f $(CONTAINERFILE) -t ${IMG} --build-arg VERSION=$(VERSION) .
+	$(CONTAINER_TOOL) build -f $(CONTAINERFILE) -t ${IMG} --build-arg VERSION=$(VERSION) --build-arg COMPONENT_IMAGE_TAG=$(COMPONENT_IMAGE_TAG) .
 
 .PHONY: image-push
 image-push: ## Push operator image.

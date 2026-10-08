@@ -6,6 +6,14 @@ OpenShift operator for the **KubeOptix** platform. Install it from OperatorHub, 
 
 Components (Harvester, Analyzer, Core AI, Configurations, Reporter, Dashboard, and PostgreSQL) come up in the `shiftwise-ai` project. Only the Dashboard has a public route. Images come from Quay; database credentials are generated automatically.
 
+## Publishing releases to Quay
+
+Each component repository builds without publishing on pull requests and feature branches, then publishes `latest` and commit-SHA tags when a commit reaches `main`. Version tags in `vMAJOR.MINOR.PATCH` format also publish immutable version tags. Workflows run on GitHub-hosted `ubuntu-latest` runners; the resulting application images continue to use their Fedora or UBI base images. Configure the `QUAY_USERNAME` and `QUAY_PASSWORD` GitHub Actions secrets in each repository, or share them with the repositories through an organization secret. Use a Quay robot account with push access to the `parraes` namespace.
+
+The Operator workflow runs `go test ./...`. When a commit reaches `main`, it publishes the Operator as `latest` and by commit SHA, configured to use the component `latest` tags. On a SemVer tag, release the components with the same version before releasing the Operator; that release publishes versioned Operator, bundle, and catalog images and updates the catalog's `stable` tag. Neither path connects to or deploys to an OpenShift cluster.
+
+The `CatalogSource` uses the `stable` catalog tag so OLM can discover later catalog updates. Applying the updated `CatalogSource` to an existing cluster remains a separate deployment step. Use `./hack/install-catalog.sh` to install the stable catalog, or pass `--version X.Y.Z` to pin a specific catalog version.
+
 ---
 
 ## 1. Catalog on the cluster

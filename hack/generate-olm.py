@@ -82,8 +82,12 @@ def previous_version() -> str:
         ):
             entries = document.get("entries", [])
             if entries:
+                replaced = {entry.get("replaces") for entry in entries}
+                heads = [entry for entry in entries if entry.get("name") not in replaced]
+                if len(heads) != 1:
+                    raise ValueError("stable channel must have exactly one head bundle")
                 prefix = f"{PACKAGE}.v"
-                name = entries[-1]["name"]
+                name = heads[0]["name"]
                 return name.removeprefix(prefix)
     return ""
 
@@ -244,7 +248,7 @@ def catalog(csv_obj: dict) -> list:
             "schema": "olm.channel",
             "package": PACKAGE,
             "name": "stable",
-            "entries": [*previous_entries, current_entry],
+            "entries": [current_entry, *previous_entries],
         },
         *previous_bundles,
         current_bundle,

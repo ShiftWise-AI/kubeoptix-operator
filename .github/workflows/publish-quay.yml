@@ -2,9 +2,14 @@ name: Publish operator images to Quay
 
 on:
   pull_request:
+    branches: [main, stage, develop]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  merge_group:
   push:
     branches:
       - main
+      - stage
+      - develop
     tags:
       - 'v*.*.*'
 
@@ -13,16 +18,21 @@ permissions:
 
 concurrency:
   group: quay-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  branch-flow:
+    uses: ./.github/workflows/branch-limits.yml
+
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Validate release tag
         if: startsWith(github.ref, 'refs/tags/')
@@ -37,7 +47,7 @@ jobs:
           }
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version-file: go.mod
           cache: true
@@ -45,48 +55,78 @@ jobs:
       - name: Run Go tests
         run: go test ./...
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Operator image without publishing
-        uses: docker/build-push-action@v6
+  security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          context: .
-          file: ./Containerfile
-          push: false
-          build-args: |
-            VERSION=0.0.0
-            COMPONENT_IMAGE_TAG=1.0.0
-          tags: quay.io/parraes/shiftwise-operator:ci-${{ github.sha }}
+          persist-credentials: false
+      - name: Validate workflow syntax
+        run: |
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/actionlint.tar.gz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz
+          echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -shellcheck= .github/workflows/*.yml
+      - name: Scan dependencies and secrets
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        with:
+          version: v0.69.3
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: false
+          skip-dirs: .git,.venv,target,node_modules,.cache
 
   publish:
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
+    needs: [branch-flow, test, security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
-          python-version: '3.x'
+          python-version: '3.12'
 
       - name: Install bundle generator dependency
-        run: python -m pip install PyYAML
+        if: startsWith(github.ref, 'refs/tags/')
+        run: python -m pip install 'PyYAML==6.0.3'
 
       - name: Resolve release versions
         id: release
         shell: bash
         run: |
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            version=0.0.0
+            component=1.0.0
+            image_tag=pr-check
+            if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+              version="main-$GITHUB_SHA"
+              component=latest
+              image_tag=latest
+            fi
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "component=$component" >> "$GITHUB_OUTPUT"
+            echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Expected a release tag in vMAJOR.MINOR.PATCH format." >&2
             exit 1
@@ -102,12 +142,15 @@ jobs:
           fi
           version="${GITHUB_REF_NAME#v}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "component=$version" >> "$GITHUB_OUTPUT"
+          echo "image_tag=$version" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
       - name: Load published catalog history
         id: catalog
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           catalog_version() {
             python - "$1" "$2" <<'PY'
@@ -161,6 +204,7 @@ jobs:
           echo "previous_version=${previous_version}" >> "$GITHUB_OUTPUT"
 
       - name: Generate OLM bundle and catalog
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           VERSION: ${{ steps.release.outputs.version }}
           PREVIOUS_VERSION: ${{ steps.catalog.outputs.previous_version }}
@@ -168,73 +212,137 @@ jobs:
           BUNDLE_IMG: quay.io/parraes/shiftwise-operator-bundle:v${{ steps.release.outputs.version }}
         run: python hack/generate-olm.py
 
-      - name: Log in to Quay
-        uses: docker/login-action@v3
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
-
-      - name: Build and publish Operator image
-        uses: docker/build-push-action@v6
+      - name: Build Operator image without publishing
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
           file: ./Containerfile
-          push: true
+          push: false
+          load: true
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
-            COMPONENT_IMAGE_TAG=${{ steps.release.outputs.version }}
+            COMPONENT_IMAGE_TAG=${{ steps.release.outputs.component }}
           tags: |
-            quay.io/parraes/shiftwise-operator:${{ steps.release.outputs.version }}
+            quay.io/parraes/shiftwise-operator:${{ steps.release.outputs.image_tag }}
             quay.io/parraes/shiftwise-operator:sha-${{ github.sha }}
 
-      - name: Build and publish OLM bundle image
-        uses: docker/build-push-action@v6
+      - name: Build OLM bundle image without publishing
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
           file: ./bundle.Dockerfile
-          push: true
+          push: false
+          load: true
           tags: |
             quay.io/parraes/shiftwise-operator-bundle:v${{ steps.release.outputs.version }}
             quay.io/parraes/shiftwise-operator-bundle:sha-${{ github.sha }}
 
-      - name: Build and publish OLM catalog image
-        uses: docker/build-push-action@v6
+      - name: Build OLM catalog image without publishing
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
           file: ./catalog.Dockerfile
-          push: true
+          push: false
+          load: true
           tags: |
             quay.io/parraes/shiftwise-operator-catalog:v${{ steps.release.outputs.version }}
+            quay.io/parraes/shiftwise-operator-catalog:sha-${{ github.sha }}
             quay.io/parraes/shiftwise-operator-catalog:stable
 
-  publish-main:
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
+      - name: Require non-root executable images
+        run: |
+          for image in shiftwise-operator shiftwise-operator-catalog; do
+            user="$(docker image inspect "quay.io/parraes/$image:sha-$GITHUB_SHA" --format '{{.Config.User}}')"
+            if [[ -z "$user" || "${user%%:*}" == '0' || "${user%%:*}" == 'root' ]]; then
+              echo "::error::$image must declare a non-root USER."
+              exit 1
+            fi
+          done
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Validate file-based OLM catalog
+        env:
+          IMAGE: quay.io/parraes/shiftwise-operator-catalog:sha-${{ github.sha }}
+        run: docker run --rm --read-only "$IMAGE" validate /configs
+
+      - name: Scan Operator image and runtime configuration
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        env:
+          TRIVY_IMAGE_CONFIG_SCANNERS: misconfig,secret
+        with:
+          version: v0.69.3
+          image-ref: quay.io/parraes/shiftwise-operator:sha-${{ github.sha }}
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: false
+
+      - name: Scan non-executable OLM bundle contents
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        with:
+          version: v0.69.3
+          image-ref: quay.io/parraes/shiftwise-operator-bundle:sha-${{ github.sha }}
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: false
+
+      - name: Scan OLM catalog and runtime configuration
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        env:
+          TRIVY_IMAGE_CONFIG_SCANNERS: misconfig,secret
+        with:
+          version: v0.69.3
+          image-ref: quay.io/parraes/shiftwise-operator-catalog:sha-${{ github.sha }}
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: false
+
+      - name: Check publishing credentials
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        env:
+          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+        run: |
+          if [[ -z "$QUAY_USERNAME" || -z "$QUAY_PASSWORD" ]]; then
+            echo '::error::Configure QUAY_USERNAME and QUAY_PASSWORD for this repository.'
+            exit 1
+          fi
 
       - name: Log in to Quay
-        uses: docker/login-action@v3
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
 
-      - name: Build and publish main Operator image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Containerfile
-          push: true
-          build-args: |
-            VERSION=main-${{ github.sha }}
-            COMPONENT_IMAGE_TAG=latest
-          tags: |
-            quay.io/parraes/shiftwise-operator:latest
-            quay.io/parraes/shiftwise-operator:sha-${{ github.sha }}
+      - name: Publish only scanned Operator image
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        env:
+          IMAGE_TAG: ${{ steps.release.outputs.image_tag }}
+        run: |
+          docker push "quay.io/parraes/shiftwise-operator:sha-$GITHUB_SHA"
+          docker push "quay.io/parraes/shiftwise-operator:$IMAGE_TAG"
+
+      - name: Publish only scanned release OLM images
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          for image in shiftwise-operator-bundle shiftwise-operator-catalog; do
+            docker push "quay.io/parraes/$image:sha-$GITHUB_SHA"
+            docker push "quay.io/parraes/$image:v$VERSION"
+          done
+          docker push quay.io/parraes/shiftwise-operator-catalog:stable
+
+  ci-required:
+    if: always()
+    needs: [branch-flow, test, security, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every mandatory job to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: jq -e 'all(.[]; .result == "success")' <<< "$RESULTS"

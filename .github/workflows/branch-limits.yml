@@ -1,19 +1,31 @@
 name: Validate Branch Flow
 
 on:
+  workflow_call:
+  merge_group:
   pull_request:
     types: [opened, edited, synchronize, reopened, ready_for_review]
 
+permissions:
+  contents: read
+
 jobs:
   check-flow:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - name: Validate PR Source and Target
         env:
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           echo "Merge attempt: from '$HEAD_REF' to '$BASE_REF'"
+
+          if [[ ( "$BASE_REF" == "stage" || ( "$BASE_REF" == "main" && "$HEAD_REF" == "stage" ) ) && "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
+            echo "::error::GitFlow promotion branches must belong to this repository."
+            exit 1
+          fi
 
           if [[ "$BASE_REF" == "stage" && "$HEAD_REF" != "develop" ]]; then
             echo "::error::The 'stage' branch only accepts pull requests from 'develop'."

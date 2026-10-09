@@ -9,8 +9,8 @@ RUN go mod download github.com/operator-framework/operator-registry@v1.74.0 \
 	&& cp -R "$(go env GOPATH)/pkg/mod/github.com/operator-framework/operator-registry@v1.74.0" /opt/app-root/src/opm-build \
 	&& chmod -R u+w /opt/app-root/src/opm-build \
 	&& cd /opt/app-root/src/opm-build \
-	&& go get golang.org/x/text@v0.41.0 golang.org/x/crypto@v0.55.0 \
-		golang.org/x/net@v0.58.0 google.golang.org/grpc@v1.83.2 \
+	&& go get golang.org/x/text@v0.42.0 golang.org/x/crypto@v0.57.0 \
+		golang.org/x/net@v0.60.0 google.golang.org/grpc@v1.83.2 \
 		github.com/go-git/go-git/v5@v5.19.2 \
 	&& go build -tags containers_image_openpgp -trimpath -ldflags '-s -w' -o /opt/app-root/src/opm \
 		./cmd/opm \

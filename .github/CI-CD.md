@@ -92,3 +92,13 @@ Acceptance requires a failing PR to remain blocked, a reviewed green promotion,
 and a successful main publication with matching Quay digest. OLM releases must
 also validate generated bundles, preserve upgrade history, and publish only
 after every image scan succeeds.
+
+## PR Failure Remediation (2026-10-09)
+
+PR #39 was blocked by a newly reported x/net CVE requiring v0.60.0. The module
+and rebuilt OPM catalog now use that patch, with the required transitives aligned
+and checksums regenerated. Go tests passed, the main operator and catalog images
+passed strict vulnerability/configuration/secret scans, and FBC validation passed
+read-only. Security policy and release behavior are unchanged. The updated PR
+requires a new green GitHub run and independent review; no main push or release
+was performed as part of these fixes.

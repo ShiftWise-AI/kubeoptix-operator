@@ -9,12 +9,12 @@
 #
 # Usage:
 #   ./hack/install-catalog.sh
-#   ./hack/install-catalog.sh --version 0.2.1
-#   ./hack/install-catalog.sh --catalog-image quay.io/parraes/shiftwise-operator-catalog:v1.0.1
+#   ./hack/install-catalog.sh --version 1.0.5
+#   ./hack/install-catalog.sh --catalog-image quay.io/parraes/shiftwise-operator-catalog:v1.0.5
 #
 # Maintainers publishing a new version to quay.io can pass --build (requires
 # `podman login quay.io` beforehand, with push access to the "parraes" org):
-#   ./hack/install-catalog.sh --build --version 0.2.3
+#   ./hack/install-catalog.sh --build --version 1.0.5
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,7 +23,7 @@ cd "${ROOT_DIR}"
 MARKETPLACE_NAMESPACE="openshift-marketplace"
 CATALOG_NAME="shiftwise-operator-catalog"
 QUAY_ORG="${QUAY_ORG:-parraes}"
-VERSION="${VERSION:-1.0.1}"
+VERSION="${VERSION:-1.0.5}"
 CONTAINER_TOOL="${CONTAINER_TOOL:-podman}"
 CONTAINERFILE="${CONTAINERFILE:-Containerfile}"
 DEFAULT_TIMEOUT="180s"
@@ -100,7 +100,6 @@ oc api-resources --api-group=route.openshift.io >/dev/null 2>&1 || die "current 
 
 OPERATOR_IMG="quay.io/${QUAY_ORG}/shiftwise-operator:${VERSION}"
 BUNDLE_IMG="quay.io/${QUAY_ORG}/shiftwise-operator-bundle:v${VERSION}"
-CATALOG_IMG="${CATALOG_IMG_OVERRIDE:-quay.io/${QUAY_ORG}/shiftwise-operator-catalog:v${VERSION}}"
 
 build_and_push() {
   command -v "${CONTAINER_TOOL}" >/dev/null 2>&1 || die "${CONTAINER_TOOL} is not installed"

@@ -1,6 +1,6 @@
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/parraes/shiftwise-operator:1.0.1
-VERSION ?= 1.0.1
+IMG ?= quay.io/parraes/shiftwise-operator:1.0.5
+VERSION ?= 1.0.5
 COMPONENT_IMAGE_TAG ?= 1.0.0
 NAMESPACE ?= shiftwise-ai
 

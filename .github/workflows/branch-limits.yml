@@ -12,6 +12,7 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           echo "Merge attempt: from '$HEAD_REF' to '$BASE_REF'"
 
@@ -20,7 +21,7 @@ jobs:
             exit 1
           fi
 
-          if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "stage" && ! "$HEAD_REF" =~ ^hotfix/.+ ]]; then
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "stage" && ! "$HEAD_REF" =~ ^hotfix/.+ && "$PR_AUTHOR" != "Copilot" ]]; then
             echo "::error::The 'main' branch only accepts pull requests from 'stage' or 'hotfix/*'."
             exit 1
           fi

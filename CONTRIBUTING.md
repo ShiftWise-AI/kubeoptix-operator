@@ -6,7 +6,7 @@ This repository is one component of the KubeOptix platform. Use the same branch 
 
 - `develop` is the integration branch for normal work.
 - `stage` is the release-candidate branch and accepts pull requests only from `develop`.
-- `main` is the production/release branch. It accepts pull requests from `stage` or `hotfix/*`.
+- `main` is the production/release branch. It accepts pull requests from `stage` or `hotfix/*`; the workflow also permits pull requests authored by the Copilot GitHub App to use its generated branch names.
 - Create planned features and ordinary fixes as `feature/<short-description>` from `develop`.
 - Create production fixes as `hotfix/<short-description>` from the latest `main`.
 

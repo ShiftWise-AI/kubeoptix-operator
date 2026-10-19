@@ -1,0 +1,38 @@
+name: Validate Branch Flow
+
+on:
+  workflow_call:
+  merge_group:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  check-flow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Validate PR Source and Target
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          echo "Merge attempt: from '$HEAD_REF' to '$BASE_REF'"
+
+          if [[ -z "$BASE_REF" ]]; then
+            exit 0
+          fi
+
+          if [[ "$BASE_REF" == "develop" && "$HEAD_REF" =~ ^feature/.+ ]]; then
+            exit 0
+          fi
+
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" == "develop" && "$HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]; then
+            exit 0
+          fi
+
+          echo "::error::Only 'feature/*' -> 'develop' and same-repository 'develop' -> 'main' pull requests are allowed."
+          exit 1

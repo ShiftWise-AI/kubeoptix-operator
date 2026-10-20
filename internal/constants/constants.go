@@ -34,10 +34,10 @@ const (
 	SharedServiceAccount = "shiftwisea-ai-user"
 	ClusterReaderRole    = "cluster-reader"
 
-	DataClaimName      = "harvester-app-data"
-	PostgresSecretName = "kubeoptix-db"
-	DashboardConfigMap = "kubeoptix-dashboard-env"
-	DashboardContainer = "dashboard"
+	DataClaimName       = "harvester-app-data"
+	PostgresSecretName  = "kubeoptix-db"
+	DashboardConfigMap  = "kubeoptix-dashboard-env"
+	DashboardContainer  = "dashboard"
 
 	DashboardServiceAccount = "kubeoptix-dashboard"
 	DashboardOAuthSecret    = "kubeoptix-dashboard-oauth"

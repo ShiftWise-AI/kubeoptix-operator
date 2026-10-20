@@ -57,7 +57,7 @@ func FromCR(sw *shiftwisev1alpha1.ShiftWise) Settings {
 		Dashboard:      true,
 
 		HarvesterImage:      registryImage(constants.HarvesterName),
-		AnalyzerImage:       registryImage(constants.AnalyzerName),
+		AnalyzerImage:       "quay.io/parraes/kubeoptix-analyzer:1.0.7@sha256:84de93180097e16ce0acb008347a644c3f7b1822407442729c5b8907df4ac1bd",
 		CoreAIImage:         registryImage(constants.CoreAIName),
 		ConfigurationsImage: constants.ConfigurationsRegistry + "/" + constants.ConfigurationsName + ":" + constants.ImageTag,
 		ReporterImage:       registryImage(constants.ReporterName),

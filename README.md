@@ -41,7 +41,7 @@ To install a specific version:
 Maintainers who need to publish a new version to quay.io (requires `podman login quay.io` with push access to the `parraes` org) can build and push before applying the `CatalogSource`:
 
 ```bash
-./hack/install-catalog.sh --build --version 1.0.1
+./hack/install-catalog.sh --build --version 1.0.8
 ```
 
 At the end, the script confirms that the `CatalogSource` is **READY** and that the package shows up in the `PackageManifest`:

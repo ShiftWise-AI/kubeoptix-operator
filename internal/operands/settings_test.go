@@ -2,6 +2,7 @@ package operands
 
 import (
 	"crypto/rand"
+	"strings"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,9 @@ func TestFromCRDefaults(t *testing.T) {
 	wantImage := "quay.io/parraes/kubeoptix-harvester:1.0.0"
 	if s.HarvesterImage != wantImage {
 		t.Fatalf("harvester image = %q, want %q", s.HarvesterImage, wantImage)
+	}
+	if !strings.HasPrefix(s.ReporterImage, "quay.io/parraes/kubeoptix-reporter:") {
+		t.Fatalf("reporter image = %q, want quay.io/parraes/kubeoptix-reporter with a version tag", s.ReporterImage)
 	}
 	if !s.Harvester || !s.Configurations || !s.Analyzer || !s.CoreAI || !s.Reporter || !s.Dashboard {
 		t.Fatal("all components should be enabled by default")

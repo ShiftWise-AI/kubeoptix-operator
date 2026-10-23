@@ -10,7 +10,7 @@ This repository is one component of the KubeOptix platform.
 
 ## Validation and releases
 
-Run the checks documented in the component README manually. Image builds, publication, and deployment are maintainer-managed manual operations.
+Run the checks documented in the README before proposing changes. GitHub Actions runs Go and release-automation tests on pull requests. Merges into `main` automatically reserve the next patch version and publish scanned Operator, bundle, and catalog images to Quay through the `quay-release` environment. Do not create release tags manually. Failed releases can be resumed with the original merge SHA without incrementing the version again. Deployment to a cluster remains a separate maintainer operation.
 
 ## Commands
 

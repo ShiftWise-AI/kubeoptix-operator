@@ -2,7 +2,7 @@ module github.com/ShiftWise-AI/kubeoptix-operator
 
 go 1.26.0
 
-toolchain go1.26.9
+toolchain go1.26.10
 
 require (
 	k8s.io/api v0.33.0

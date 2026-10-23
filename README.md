@@ -8,7 +8,15 @@ Components (Harvester, Analyzer, Core AI, Configurations, Reporter, Dashboard, a
 
 ## Publishing releases to Quay
 
-Build, validation, and publication are manual maintainer operations. Run `go test ./...` before releasing the Operator. For versioned releases, publish the component images with the same version before building and publishing the Operator, bundle, and catalog images. Use `podman login quay.io` with an account that has push access to the `parraes` namespace.
+GitHub Actions automatically releases each allowed same-repository PR merged into `main`, following the same patch-version reservation convention as the platform components. After validation, the workflow increments the highest stable `vMAJOR.MINOR.PATCH` Git tag (starting at `v1.0.0`), reserves an annotated tag for the merge commit, and publishes the scanned Operator, OLM bundle, and catalog images to Quay. Do not create release tags manually; tag pushes do not trigger publication.
+
+The release job uses the `quay-release` environment, requires `QUAY_USERNAME` and `QUAY_PASSWORD`, and needs GitHub token permissions to write repository contents and read pull requests. Releases run in a single `queue: max` queue. Published versioned images are reused only when their source/version labels match the reservation. Only the current `main` commit with the highest reserved version can update Operator `latest` and catalog `stable`.
+
+To recover from a failed release, rerun its workflow or use **Run workflow** on `main`, supplying the original full merge SHA in `source`. The same commit reuses its reserved version rather than consuming another patch number. Leave `source` empty to release the current `main` commit. A reserved tag alone does not mean all images have been published; check that the workflow completed successfully.
+
+Operator and component versions are independent. The workflow uses `COMPONENT_IMAGE_TAG=1.0.5` as the last common published fallback for components that do not yet have an explicit image reference in the source. Individual component image updates remain controlled by their update PRs; incrementing the Operator version does not require matching component tags.
+
+For local validation, run `go test ./...` and `python3 -m unittest discover -s hack -p 'test_ci_release.py' -v` (the latter requires `PyYAML==6.0.3`). Manual local image builds remain available with `podman login quay.io` and push access to the `parraes` namespace.
 
 The `CatalogSource` uses the `stable` catalog tag so OLM can discover later catalog updates. Applying the updated `CatalogSource` to an existing cluster remains a separate deployment step. Use `./hack/install-catalog.sh` to install the stable catalog, or pass `--version X.Y.Z` to pin a specific catalog version.
 
@@ -33,7 +41,7 @@ To install a specific version:
 Maintainers who need to publish a new version to quay.io (requires `podman login quay.io` with push access to the `parraes` org) can build and push before applying the `CatalogSource`:
 
 ```bash
-./hack/install-catalog.sh --build --version 1.0.1
+./hack/install-catalog.sh --build --version 1.0.8
 ```
 
 At the end, the script confirms that the `CatalogSource` is **READY** and that the package shows up in the `PackageManifest`:

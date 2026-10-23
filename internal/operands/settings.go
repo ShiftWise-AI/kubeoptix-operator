@@ -57,11 +57,11 @@ func FromCR(sw *shiftwisev1alpha1.ShiftWise) Settings {
 		Dashboard:      true,
 
 		HarvesterImage:      registryImage(constants.HarvesterName),
-		AnalyzerImage:       registryImage(constants.AnalyzerName),
-		CoreAIImage:         registryImage(constants.CoreAIName),
-		ConfigurationsImage: constants.ConfigurationsRegistry + "/" + constants.ConfigurationsName + ":" + constants.ImageTag,
-		ReporterImage:       "quay.io/parraes/kubeoptix-reporter:1.0.6",
-		DashboardImage:      registryImage(constants.DashboardName),
+		AnalyzerImage:       "quay.io/parraes/kubeoptix-analyzer:1.0.7@sha256:84de93180097e16ce0acb008347a644c3f7b1822407442729c5b8907df4ac1bd",
+		CoreAIImage:         "quay.io/parraes/kubeoptix-core-ai:1.0.6@sha256:5ce0acd5b8d644072da33dfa380b4ff68e4bbaa458bf9699038dd4d5f4af698a",
+		ConfigurationsImage: "quay.io/parraes/kubeoptix-configurations:1.0.7@sha256:d111a4e05ef7813060815ef77182d8249538828e382a93e2f45ae8287164ac03",
+		ReporterImage:       "quay.io/parraes/kubeoptix-reporter:1.0.6@sha256:c2a555ff8cec8ebd14f180191c599d92c73c58438ee1e1346c0a8985f7ba3e34",
+		DashboardImage:      "quay.io/parraes/kubeoptix-dashboard:1.0.6@sha256:636ec01b4794e3a10c3c29121747b541dde43c5e833e7c83b1c74ee80f8919de",
 		PostgresImage:       constants.DefaultPostgresImage,
 	}
 	if len(s.AccessModes) == 0 {

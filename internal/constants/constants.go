@@ -46,8 +46,8 @@ const (
 	OAuthProxyImage         = "image-registry.openshift-image-registry.svc:5000/openshift/oauth-proxy:v4.4"
 	AuthDelegatorRole       = "system:auth-delegator"
 
-	DefaultStorageSize  = "10Gi"
-	PostgresStorageSize = "20Gi"
+	DefaultStorageSize  = "20Gi"
+	PostgresStorageSize = "10Gi"
 
 	DefaultPostgresImage = "registry.redhat.io/rhel9/postgresql-18:9.8-1787043471"
 	DefaultPostgresUser  = "kubeoptix"

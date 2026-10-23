@@ -1,7 +1,7 @@
 FROM registry.access.redhat.com/ubi9/go-toolset:1.25 AS builder
 
 ENV CGO_ENABLED=0 \
-	GOTOOLCHAIN=go1.26.9
+	GOTOOLCHAIN=go1.26.10
 
 WORKDIR /opt/app-root/src
 

@@ -7,44 +7,42 @@ on:
   merge_group:
     branches: [main, develop]
   push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Full main merge commit SHA to resume (empty uses current main)
+        required: false
+        type: string
 
 permissions:
   contents: read
-
-concurrency:
-  group: quay-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   branch-flow:
     uses: ./.github/workflows/branch-limits.yml
 
   test:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          ref: ${{ inputs.source || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Validate release tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Expected a release tag in vMAJOR.MINOR.PATCH format." >&2
-            exit 1
-          fi
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
-            echo "Release tags must point to a commit on main." >&2
-            exit 1
-          }
+      - name: Set up Python for release tests
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+
+      - name: Install release test dependency
+        run: python -m pip install 'PyYAML==6.0.3'
+
+      - name: Test release automation
+        run: python -m unittest discover -s hack -p 'test_ci_release.py' -v
 
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
@@ -61,14 +59,16 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          ref: ${{ inputs.source || github.sha }}
           persist-credentials: false
       - name: Validate workflow syntax
         run: |
           curl --fail --silent --show-error --location --output "$RUNNER_TEMP/actionlint.tar.gz" \
-            https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz
-          echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check --status
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check --status
           tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
-          "$RUNNER_TEMP/actionlint" -shellcheck= .github/workflows/*.yml
+          "$RUNNER_TEMP/actionlint" -shellcheck= -ignore '^unexpected key "queue" for "concurrency" section\.' .github/workflows/*.yml
+          grep -Fqx '      queue: max' .github/workflows/publish-quay.yml
       - name: Set up Python for SAST
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
@@ -90,76 +90,110 @@ jobs:
           skip-dirs: .git,.venv,target,node_modules,.cache
 
   publish:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    if: github.event_name != 'pull_request' && github.event_name != 'merge_group' && github.ref == 'refs/heads/main'
     needs: [branch-flow, test, security]
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
+    environment: quay-release
+    concurrency:
+      group: operator-production-release
+      cancel-in-progress: false
+      queue: max
+    permissions:
+      contents: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      COMPONENT_IMAGE_TAG: '1.0.5'
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          ref: main
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Set up Go
-        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Set up Python
-        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
 
       - name: Install bundle generator dependency
-        if: startsWith(github.ref, 'refs/tags/')
         run: python -m pip install 'PyYAML==6.0.3'
 
-      - name: Resolve release versions
-        id: release
-        shell: bash
+      - name: Check credentials before reserving a release
+        env:
+          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
         run: |
-          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
-            version=0.0.0
-            component=1.0.0
-            image_tag=pr-check
-            if [[ "$GITHUB_REF" == refs/heads/main ]]; then
-              version="main-$GITHUB_SHA"
-              component=latest
-              image_tag=latest
+          for name in QUAY_USERNAME QUAY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing secret $name"
+              exit 1
             fi
-            echo "version=$version" >> "$GITHUB_OUTPUT"
-            echo "component=$component" >> "$GITHUB_OUTPUT"
-            echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Expected a release tag in vMAJOR.MINOR.PATCH format." >&2
-            exit 1
-          fi
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
-            echo "Release tags must point to a commit on main." >&2
-            exit 1
-          }
-          latest_tag="$(git tag --merged origin/main --list 'v*.*.*' | sort -V | tail -n 1)"
-          if [[ "$latest_tag" != "$GITHUB_REF_NAME" ]]; then
-            echo "Refusing to publish an older release after $latest_tag." >&2
-            exit 1
-          fi
-          version="${GITHUB_REF_NAME#v}"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "component=$version" >> "$GITHUB_OUTPUT"
-          echo "image_tag=$version" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Configure release identity
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Reserve or resume version
+        id: release
+        env:
+          SOURCE: ${{ inputs.source || github.sha }}
+        run: python hack/ci-release.py --source "$SOURCE"
+
+      - name: Test exact versioned source
+        run: go test ./...
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
+      - name: Log in to Quay
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Load previously published immutable images
+        id: existing
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SOURCE: ${{ steps.release.outputs.source }}
+        run: |
+          for kind in operator bundle catalog; do
+            image=quay.io/parraes/shiftwise-operator
+            tag="$VERSION"
+            if [[ "$kind" != operator ]]; then
+              image="$image-$kind"
+              tag="v$VERSION"
+            fi
+            if docker manifest inspect "$image:$tag" > /dev/null 2> "$RUNNER_TEMP/manifest-error"; then
+              docker pull "$image:$tag"
+              revision="$(docker image inspect "$image:$tag" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+              version="$(docker image inspect "$image:$tag" --format '{{index .Config.Labels "org.opencontainers.image.version"}}')"
+              [[ "$revision" == "$SOURCE" && "$version" == "$VERSION" ]] || { echo '::error::Existing image provenance mismatch'; exit 1; }
+              docker tag "$image:$tag" "$image:sha-$SOURCE"
+              echo "$kind=true" >> "$GITHUB_OUTPUT"
+            elif grep -Eqi 'manifest unknown|no such manifest' "$RUNNER_TEMP/manifest-error"; then
+              echo "$kind=false" >> "$GITHUB_OUTPUT"
+            else
+              echo '::error::Cannot query Quay; refusing to overwrite a release'
+              exit 1
+            fi
+          done
+
       - name: Load published catalog history
         id: catalog
-        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
           catalog_version() {
             python - "$1" "$2" <<'PY'
@@ -190,7 +224,7 @@ jobs:
           PY
           }
 
-          release_version="${GITHUB_REF_NAME#v}"
+          release_version="$VERSION"
           fallback_version="$(catalog_version catalog/shiftwise-operator/catalog.yaml "$release_version")"
           catalog_image=quay.io/parraes/shiftwise-operator-catalog:stable
           if ! docker pull "$catalog_image"; then
@@ -213,7 +247,6 @@ jobs:
           echo "previous_version=${previous_version}" >> "$GITHUB_OUTPUT"
 
       - name: Generate OLM bundle and catalog
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           VERSION: ${{ steps.release.outputs.version }}
           PREVIOUS_VERSION: ${{ steps.catalog.outputs.previous_version }}
@@ -222,6 +255,7 @@ jobs:
         run: python hack/generate-olm.py
 
       - name: Build Operator image without publishing
+        if: steps.existing.outputs.operator != 'true'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
@@ -230,38 +264,50 @@ jobs:
           load: true
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
-            COMPONENT_IMAGE_TAG=${{ steps.release.outputs.component }}
+            COMPONENT_IMAGE_TAG=${{ env.COMPONENT_IMAGE_TAG }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.release.outputs.version }}
+            org.opencontainers.image.revision=${{ steps.release.outputs.source }}
           tags: |
-            quay.io/parraes/shiftwise-operator:${{ steps.release.outputs.image_tag }}
-            quay.io/parraes/shiftwise-operator:sha-${{ github.sha }}
+            quay.io/parraes/shiftwise-operator:${{ steps.release.outputs.version }}
+            quay.io/parraes/shiftwise-operator:sha-${{ steps.release.outputs.source }}
 
       - name: Build OLM bundle image without publishing
+        if: steps.existing.outputs.bundle != 'true'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
           file: ./bundle.Dockerfile
           push: false
           load: true
+          labels: |
+            org.opencontainers.image.version=${{ steps.release.outputs.version }}
+            org.opencontainers.image.revision=${{ steps.release.outputs.source }}
           tags: |
             quay.io/parraes/shiftwise-operator-bundle:v${{ steps.release.outputs.version }}
-            quay.io/parraes/shiftwise-operator-bundle:sha-${{ github.sha }}
+            quay.io/parraes/shiftwise-operator-bundle:sha-${{ steps.release.outputs.source }}
 
       - name: Build OLM catalog image without publishing
+        if: steps.existing.outputs.catalog != 'true'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
           file: ./catalog.Dockerfile
           push: false
           load: true
+          labels: |
+            org.opencontainers.image.version=${{ steps.release.outputs.version }}
+            org.opencontainers.image.revision=${{ steps.release.outputs.source }}
           tags: |
             quay.io/parraes/shiftwise-operator-catalog:v${{ steps.release.outputs.version }}
-            quay.io/parraes/shiftwise-operator-catalog:sha-${{ github.sha }}
-            quay.io/parraes/shiftwise-operator-catalog:stable
+            quay.io/parraes/shiftwise-operator-catalog:sha-${{ steps.release.outputs.source }}
 
       - name: Require non-root executable images
+        env:
+          SOURCE: ${{ steps.release.outputs.source }}
         run: |
           for image in shiftwise-operator shiftwise-operator-catalog; do
-            user="$(docker image inspect "quay.io/parraes/$image:sha-$GITHUB_SHA" --format '{{.Config.User}}')"
+            user="$(docker image inspect "quay.io/parraes/$image:sha-$SOURCE" --format '{{.Config.User}}')"
             if [[ -z "$user" || "${user%%:*}" == '0' || "${user%%:*}" == 'root' ]]; then
               echo "::error::$image must declare a non-root USER."
               exit 1
@@ -270,7 +316,7 @@ jobs:
 
       - name: Validate file-based OLM catalog
         env:
-          IMAGE: quay.io/parraes/shiftwise-operator-catalog:sha-${{ github.sha }}
+          IMAGE: quay.io/parraes/shiftwise-operator-catalog:sha-${{ steps.release.outputs.source }}
         run: docker run --rm --read-only "$IMAGE" validate /configs
 
       - name: Scan Operator image and runtime configuration
@@ -279,7 +325,7 @@ jobs:
           TRIVY_IMAGE_CONFIG_SCANNERS: misconfig,secret
         with:
           version: v0.69.3
-          image-ref: quay.io/parraes/shiftwise-operator:sha-${{ github.sha }}
+          image-ref: quay.io/parraes/shiftwise-operator:sha-${{ steps.release.outputs.source }}
           scanners: vuln,secret
           severity: HIGH,CRITICAL
           exit-code: '1'
@@ -289,7 +335,7 @@ jobs:
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
           version: v0.69.3
-          image-ref: quay.io/parraes/shiftwise-operator-bundle:sha-${{ github.sha }}
+          image-ref: quay.io/parraes/shiftwise-operator-bundle:sha-${{ steps.release.outputs.source }}
           scanners: vuln,secret
           severity: HIGH,CRITICAL
           exit-code: '1'
@@ -301,49 +347,56 @@ jobs:
           TRIVY_IMAGE_CONFIG_SCANNERS: misconfig,secret
         with:
           version: v0.69.3
-          image-ref: quay.io/parraes/shiftwise-operator-catalog:sha-${{ github.sha }}
+          image-ref: quay.io/parraes/shiftwise-operator-catalog:sha-${{ steps.release.outputs.source }}
           scanners: vuln,secret
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: false
 
-      - name: Check publishing credentials
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
-        env:
-          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
-          QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-        run: |
-          if [[ -z "$QUAY_USERNAME" || -z "$QUAY_PASSWORD" ]]; then
-            echo '::error::Configure QUAY_USERNAME and QUAY_PASSWORD for this repository.'
-            exit 1
-          fi
-
-      - name: Log in to Quay
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
-
-      - name: Publish only scanned Operator image
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
-        env:
-          IMAGE_TAG: ${{ steps.release.outputs.image_tag }}
-        run: |
-          docker push "quay.io/parraes/shiftwise-operator:sha-$GITHUB_SHA"
-          docker push "quay.io/parraes/shiftwise-operator:$IMAGE_TAG"
-
-      - name: Publish only scanned release OLM images
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      - name: Publish scanned immutable images and verify digests
+        id: published
         env:
           VERSION: ${{ steps.release.outputs.version }}
+          SOURCE: ${{ steps.release.outputs.source }}
+          EXISTING: ${{ toJSON(steps.existing.outputs) }}
         run: |
-          for image in shiftwise-operator-bundle shiftwise-operator-catalog; do
-            docker push "quay.io/parraes/$image:sha-$GITHUB_SHA"
-            docker push "quay.io/parraes/$image:v$VERSION"
+          for kind in operator bundle catalog; do
+            image=quay.io/parraes/shiftwise-operator
+            tag="$VERSION"
+            if [[ "$kind" != operator ]]; then
+              image="$image-$kind"
+              tag="v$VERSION"
+            fi
+            if [[ "$(jq -r --arg kind "$kind" '.[$kind]' <<< "$EXISTING")" != true ]]; then
+              docker push "$image:$tag"
+            fi
+            digest="$(docker buildx imagetools inspect "$image:$tag" --format '{{.Manifest.Digest}}')"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            docker pull "$image:$tag@$digest"
+            docker tag "$image:$tag@$digest" "$image:sha-$SOURCE"
+            docker push "$image:sha-$SOURCE"
+            echo "$kind=$digest" >> "$GITHUB_OUTPUT"
           done
+
+      - name: Update current release aliases without rolling back
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SOURCE: ${{ steps.release.outputs.source }}
+          OPERATOR_DIGEST: ${{ steps.published.outputs.operator }}
+          CATALOG_DIGEST: ${{ steps.published.outputs.catalog }}
+        run: |
+          git fetch origin main --tags
+          highest="$(git tag -l 'v*' | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' | sort -V | tail -1)"
+          if [[ "$(git rev-parse origin/main)" != "$SOURCE" || "$highest" != "v$VERSION" ]]; then
+            echo 'Historical release published; leaving latest and stable unchanged.'
+            exit 0
+          fi
+          docker tag "quay.io/parraes/shiftwise-operator:$VERSION@$OPERATOR_DIGEST" quay.io/parraes/shiftwise-operator:latest
+          docker push quay.io/parraes/shiftwise-operator:latest
+          [[ "$(docker buildx imagetools inspect quay.io/parraes/shiftwise-operator:latest --format '{{.Manifest.Digest}}')" == "$OPERATOR_DIGEST" ]]
+          docker tag "quay.io/parraes/shiftwise-operator-catalog:v$VERSION@$CATALOG_DIGEST" quay.io/parraes/shiftwise-operator-catalog:stable
           docker push quay.io/parraes/shiftwise-operator-catalog:stable
+          [[ "$(docker buildx imagetools inspect quay.io/parraes/shiftwise-operator-catalog:stable --format '{{.Manifest.Digest}}')" == "$CATALOG_DIGEST" ]]
 
   ci-required:
     if: always()
@@ -358,9 +411,10 @@ jobs:
           jq -e --arg event "$GITHUB_EVENT_NAME" '
             .["branch-flow"].result == "success" and
             .security.result == "success" and
-            (if $event == "push" then
-              .test.result == "success" and .publish.result == "success"
+            .test.result == "success" and
+            (if $event == "push" or $event == "workflow_dispatch" then
+              .publish.result == "success"
             else
-              .test.result == "skipped" and .publish.result == "skipped"
+              .publish.result == "skipped"
             end)
           ' <<< "$RESULTS"

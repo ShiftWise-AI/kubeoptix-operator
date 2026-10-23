@@ -12,7 +12,7 @@ ARG VERSION
 ARG COMPONENT_IMAGE_TAG
 ENV CGO_ENABLED=0 \
     GOOS=linux \
-    GOTOOLCHAIN=go1.26.9 \
+    GOTOOLCHAIN=go1.26.10 \
     GOFLAGS="-mod=mod"
 
 WORKDIR /opt/app-root/src
